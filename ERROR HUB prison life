@@ -291,3 +291,75 @@ Tab:Toggle({
         end
     end
 })
+    local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+local RunService = game:GetService("RunService")
+
+local loopRunning = false
+local equipIndex = 1
+local equipTools = {}
+
+local function updateEquipTools()
+    equipTools = {}
+    local remington = backpack:FindFirstChild("Remington 870")
+    local ak47 = backpack:FindFirstChild("AK-47")
+    local m9 = backpack:FindFirstChild("M9")
+    if remington then table.insert(equipTools, remington) end
+    if ak47 then table.insert(equipTools, ak47) end
+    if m9 then table.insert(equipTools, m9) end
+end
+
+local lastEquipTime = 0
+local equipInterval = 0.01 -- สลับทุก 0.01 วินาที
+
+local function equipToolAtIndex(index)
+    local tool = equipTools[index]
+    if tool and player.Character then
+        local currentTool = player.Character:FindFirstChildOfClass("Tool")
+        if currentTool then
+            currentTool.Parent = backpack
+        end
+        tool.Parent = player.Character
+    end
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if loopRunning then
+        lastEquipTime = lastEquipTime + dt
+        if lastEquipTime >= equipInterval then
+            equipToolAtIndex(equipIndex)
+            equipIndex = equipIndex + 1
+            if equipIndex > #equipTools then
+                equipIndex = 1
+            end
+            lastEquipTime = 0
+        end
+    end
+end)
+
+local function startEquip()
+    updateEquipTools()
+    if #equipTools == 0 then return end
+    loopRunning = true
+end
+
+local function stopEquip()
+    loopRunning = false
+end
+
+local function Toggle(state)
+    if state then
+        startEquip()
+    else
+        stopEquip()
+    end
+end
+
+Main:Toggle({
+    Title = "สลับปืน",
+    Value = false,
+    Callback = function(value)
+        Toggle(value)
+    end
+})
