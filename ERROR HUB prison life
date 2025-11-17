@@ -1,3 +1,4 @@
+-- โหลดเสียง
 local SoundService = game:GetService("SoundService")
 local loadSound = Instance.new("Sound")
 loadSound.SoundId = "rbxassetid://98797174600699"
@@ -6,8 +7,10 @@ loadSound.Parent = SoundService
 loadSound:Play()
 game.Debris:AddItem(loadSound, 3)
 
+-- โหลด UI Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
 
+-- สร้างหน้าต่าง UI
 local Window = Library:Window({
     Title = "ERROR HUB",
     Desc = "PRISON LIFE",
@@ -23,9 +26,13 @@ local Window = Library:Window({
     }
 })
 
+-- ประกาศ Tab ชื่อ MainTap
+local MainTap = Window:Tab({Title = "Main", Icon = "star"})
+MainTap:Section({Title = ""})
+
+-- ตัวแปรผู้เล่นและบัพปืน
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
-
 local buffEnabled = false
 
 -- ฟังก์ชันบัพปืน
@@ -76,10 +83,8 @@ end
 
 plr.Backpack.ChildAdded:Connect(HandleBuffOnTool)
 
-local Tab = Window:Tab({Title = "Main", Icon = "star"})
-Tab:Section({Title = ""})
-
-:Toggle({
+-- Toggle สำหรับบัพปืนใน UI
+MainTap:Toggle({
     Title = "บัพปืน",
     Value = false,
     Callback = function(val)
@@ -106,8 +111,7 @@ Tab:Section({Title = ""})
     end
 })
 
--- เริ่ม ESP ส่วนนี้
-
+-- ESP ส่วนนี้ (ไม่แก้ไขอะไรนะ)
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
@@ -224,11 +228,11 @@ local function updateESP()
                 d.HealthBar.To = Vector2.new(topLeft.X - 6, bottomLeft.Y - healthBarHeight)
 
                 if healthPercent > 0.6 then
-                    d.HealthBar.Color = Color3.fromRGB(0, 255, 0) -- เขียว
+                    d.HealthBar.Color = Color3.fromRGB(0, 255, 0)
                 elseif healthPercent > 0.3 then
-                    d.HealthBar.Color = Color3.fromRGB(255, 255, 0) -- เหลือง
+                    d.HealthBar.Color = Color3.fromRGB(255, 255, 0)
                 else
-                    d.HealthBar.Color = Color3.fromRGB(255, 0, 0) -- แดง
+                    d.HealthBar.Color = Color3.fromRGB(255, 0, 0)
                 end
 
                 d.HealthBar.Visible = true
@@ -275,12 +279,8 @@ local function stopESP()
     clearAllDraws()
 end
 
-local function clearAllDraws()
-    for plr in pairs(esp) do removeDrawsFor(plr) end
-end
-
--- เพิ่ม Toggle UI สำหรับ ESP
-Tab:Toggle({
+-- Toggle UI สำหรับ ESP
+MainTap:Toggle({
     Title = "ESP มองคนในเซิฟ",
     Value = false,
     Callback = function(val)
@@ -291,10 +291,10 @@ Tab:Toggle({
         end
     end
 })
-    local Players = game:GetService("Players")
+
+-- สลับปืนอัตโนมัติ
 local player = Players.LocalPlayer
 local backpack = player:WaitForChild("Backpack")
-local RunService = game:GetService("RunService")
 
 local loopRunning = false
 local equipIndex = 1
@@ -313,22 +313,21 @@ end
 local lastEquipTime = 0
 local equipInterval = 0.01 -- สลับทุก 0.01 วินาที
 
-local function equipToolAtIndex(index)
-    local tool = equipTools[index]
-    if tool and player.Character then
-        local currentTool = player.Character:FindFirstChildOfClass("Tool")
-        if currentTool then
-            currentTool.Parent = backpack
-        end
-        tool.Parent = player.Character
-    end
-end
-
+local RunService = game:GetService("RunService")
 RunService.Heartbeat:Connect(function(dt)
     if loopRunning then
         lastEquipTime = lastEquipTime + dt
         if lastEquipTime >= equipInterval then
-            equipToolAtIndex(equipIndex)
+            updateEquipTools()  -- อัปเดตปืนก่อนสลับทุกรอบ
+            local tool = equipTools[equipIndex]
+            if tool and player.Character then
+                local currentTool = player.Character:FindFirstChildOfClass("Tool")
+                if currentTool then
+                    currentTool.Parent = backpack
+                end
+                tool.Parent = player.Character
+            end
+
             equipIndex = equipIndex + 1
             if equipIndex > #equipTools then
                 equipIndex = 1
@@ -348,8 +347,7 @@ local function stopEquip()
     loopRunning = false
 end
 
--- ประกาศฟังก์ชัน Toggle ให้ชัดเจน
-local function Toggle(state)
+local function ToggleEquip(state)
     if state then
         startEquip()
     else
@@ -357,11 +355,11 @@ local function Toggle(state)
     end
 end
 
--- เชื่อมกับ UI Toggle ของคุณ
-Tap:Toggle({
+-- Toggle UI สำหรับสลับปืน
+MainTap:Toggle({
     Title = "สลับปืน",
     Value = false,
     Callback = function(value)
-        Toggle(value)
+        ToggleEquip(value)
     end
 })
