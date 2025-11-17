@@ -79,7 +79,7 @@ plr.Backpack.ChildAdded:Connect(HandleBuffOnTool)
 local Tab = Window:Tab({Title = "Main", Icon = "star"})
 Tab:Section({Title = ""})
 
-MainTab:Toggle({
+:Toggle({
     Title = "บัพปืน",
     Value = false,
     Callback = function(val)
@@ -358,7 +358,7 @@ local function Toggle(state)
 end
 
 -- เชื่อมกับ UI Toggle ของคุณ
-Maintap:Toggle({
+Tap:Toggle({
     Title = "สลับปืน",
     Value = false,
     Callback = function(value)
