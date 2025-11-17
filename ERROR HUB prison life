@@ -348,6 +348,7 @@ local function stopEquip()
     loopRunning = false
 end
 
+-- ประกาศฟังก์ชัน Toggle ให้ชัดเจน
 local function Toggle(state)
     if state then
         startEquip()
@@ -356,6 +357,7 @@ local function Toggle(state)
     end
 end
 
+-- เชื่อมกับ UI Toggle ของคุณ
 Main:Toggle({
     Title = "สลับปืน",
     Value = false,
