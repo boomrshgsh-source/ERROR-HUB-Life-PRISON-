@@ -291,3 +291,35 @@ MainTap:Toggle({
         end
     end
 })
+ 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- ฟังก์ชัน TP และตรวจสอบ AK-47
+local function goGetAK()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = character:WaitForChild("HumanoidRootPart")
+
+    local originalCFrame = hrp.CFrame
+    local targetPosition = Vector3.new(-931.67, 99.73, 2039.29)
+
+    hrp.CFrame = CFrame.new(targetPosition)
+
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if LocalPlayer.Backpack:FindFirstChild("AK-47") then
+            hrp.CFrame = originalCFrame
+            connection:Disconnect()
+        end
+    end)
+end
+
+-- ปุ่มใน UI เรียกฟังก์ชัน
+MainTab:Button({
+    Title = "ไปเอาปืน AK-47",
+    Value = false,
+    Callback = function(value)
+        goGetAK()
+    end
+})
