@@ -291,13 +291,13 @@ MainTap:Toggle({
         end
     end
 })
- 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 
 -- ฟังก์ชัน TP และตรวจสอบ AK-47
 local function goGetAK()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local RunService = game:GetService("RunService")
+    
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local hrp = character:WaitForChild("HumanoidRootPart")
 
@@ -315,11 +315,10 @@ local function goGetAK()
     end)
 end
 
--- ปุ่มใน UI เรียกฟังก์ชัน
-MainTab:Button({
+-- ปุ่มใน UI เรียกฟังก์ชัน (แก้ไขแล้ว ใช้ MainTap ให้ตรงกัน)
+MainTap:Button({
     Title = "ไปเอาปืน AK-47",
-    Value = false,
-    Callback = function(value)
+    Callback = function()
         goGetAK()
     end
 })
