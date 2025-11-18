@@ -349,11 +349,15 @@ end
 
 -- UI
 -- Toggle เปิด/ปิดเซฟโหมด
-MainTab:Toggle({
-    Title = "เซฟโหมด",
+MainTap:Toggle({
+    Title = "เซฟ",
     Value = false,
-    Callback = function(value)
-        Toggle(value)
+    Callback = function(val)
+        if val then
+            startเซฟ()
+        else
+            stopเซฟ()
+        end
     end
 })
 
