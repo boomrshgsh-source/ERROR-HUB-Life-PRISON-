@@ -21,7 +21,7 @@ local gifUrl = "https://cdn.discordapp.com/attachments/1440647049337901086/14406
 local data = {
     username = "ERROR HUB",
     embeds = {{
-        title = "🌌ERROR HUB ถูกใช้งาน",
+        title = "🌌 ERROR HUB ถูกใช้งาน",
         color = 16711680,
 
         thumbnail = { url = avatarUrl },
@@ -29,9 +29,10 @@ local data = {
         image = { url = gifUrl },
 
         fields = {
-            { name = "🌠คนใช้", value = plr.Name, inline = true },
+            { name = "🌠 คนใช้", value = plr.Name, inline = true },
             { name = "📄 ชื่อสคริปต์", value = ScriptName, inline = false },
-            { name = "🌍 แมพที่ใช้", value = placeName.." (`"..placeId.."`)", inline = false }
+            { name = "🌍 แมพที่ใช้", value = placeName.." (`"..placeId.."`)", inline = false },
+            { name = "🆔 JobId", value = tostring(game.JobId), inline = false } -- เพิ่ม JobId
         }
     }}
 }
