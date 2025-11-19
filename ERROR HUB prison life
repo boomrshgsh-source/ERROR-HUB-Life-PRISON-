@@ -370,4 +370,74 @@ MainTap:Button({
         goGetAK()
     end
 })
+local invisLocation = Vector3.new(250.0415802001953, 61.24081802368164, 2360.644775390625)
+
+local invis_on = false
+
+local function setTransparency(character, transparency)
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = transparency
+        end
+    end
+end
+
+local function toggleInvisibility()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+        return
+    end
+    
+    invis_on = not invis_on
+    sound:Play()
+
+    if invis_on then
+        local savedCFrame = player.Character.HumanoidRootPart.CFrame
+        
+        -- ✔ วาร์ปไปตำแหน่งใหม่
+        player.Character:MoveTo(invisLocation)
+        task.wait(0.15)
+        
+        -- ✔ สร้างเก้าอี้ล่องหน
+        local Seat = Instance.new("Seat")
+        Seat.Name = "invischair"
+        Seat.Anchored = false
+        Seat.CanCollide = false
+        Seat.Transparency = 1
+        Seat.Parent = workspace
+
+        -- ✔ เซ็ตเก้าอี้ไว้ที่ตำแหน่งเดิมของผู้เล่น
+        Seat.CFrame = savedCFrame
+        
+        -- ✔ เชื่อมตัวละครเข้ากับเก้าอี้
+        local torso = player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso")
+        if torso then
+            local Weld = Instance.new("Weld")
+            Weld.Part0 = Seat
+            Weld.Part1 = torso
+            Weld.Parent = Seat
+        end
+        
+        setTransparency(player.Character, 1)
+
+    else
+        local invisChair = workspace:FindFirstChild("invischair")
+        if invisChair then
+            invisChair:Destroy()
+        end
+        
+        setTransparency(player.Character, 0)
+    end
+end
+
+MainTap:Toggle({
+    Title = "ล่องหน",
+    Value = false,
+    Callback = function(value)
+        if value and not invis_on then
+            toggleInvisibility()
+        elseif not value and invis_on then
+            toggleInvisibility()
+        end
+    end
+})
    
