@@ -380,10 +380,10 @@ local function goTree()
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
 
-    hrp.CFrame = CFrame.new(470.88, 97.43, 2401.81)
+    hrp.CFrame = CFrame.new(473.02, 109.78, 2395.03)
 end
 TPTab:Button({
-    Title = "ไปเอาปืน AK-47",
+    Title = "ไปที่ต้นไม้หน้าคุก",
     Callback = function()
         goTree()
     end
