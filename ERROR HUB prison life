@@ -370,25 +370,3 @@ MainTap:Button({
         goGetAK()
     end
 })
-
-local TpTap = Window:Tab({Title = "Tp", Icon = "star"})
-TpTap:Section({Title = ""})
-
-local function goTree()
-    local Players = game:GetService("Players")
-    local player = Players.LocalPlayer
-
-    local character = player.Character or player.CharacterAdded:Wait()
-    local hrp = character:WaitForChild("HumanoidRootPart")
-
-    local targetPosition = Vector3.new(470.88, 97.43, 2401.81)
-
-    hrp.CFrame = CFrame.new(targetPosition)
-end
-
-TpTap:Button({
-    Title = "ไปหน้าคุก",
-    Callback = function()
-        goTree()
-    end
-})
