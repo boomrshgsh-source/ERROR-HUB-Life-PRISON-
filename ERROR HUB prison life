@@ -370,3 +370,20 @@ MainTap:Button({
         goGetAK()
     end
 })
+
+-- แท็บ Tp
+local TpTap = Window:CreatePage("Tp")
+local TpSection = TpTap:CreateSection("Teleport Zone")  
+
+
+local function goTree()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    hrp.CFrame = CFrame.new(470.88, 97.43, 2401.81)
+end
+
+TpSection:CreateButton("ไปหน้าคุก", function()
+    goTree()
+end)
