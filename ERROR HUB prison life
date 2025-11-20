@@ -78,7 +78,133 @@ local Window = Library:Window({
 local MainTap = Window:Tab({Title = "Main", Icon = "star"})
 MainTap:Section({Title = ""})
 
--- ตัวแปรผู้เล่นและบัพปืน
+
+local humanoid
+local jumpEnabled, jumpValue = false, 100
+local tpWalkEnabled, tpWalkLevel, tpWalkSpeed, tpWalkThread = false, 1, 50, nil
+local noclipEnabled = false
+local followEnabled, followTarget, followLoop, followMode, followDistance = false, nil, nil, "Tween", 16
+
+local function updateHumanoid()
+    local char = player.Character
+    if char then humanoid = char:FindFirstChildOfClass("Humanoid") end
+end
+updateHumanoid()
+
+local function updateTpWalkSpeed()
+    tpWalkSpeed = tpWalkLevel * 50
+end
+
+local function toggleTpWalk(on)
+    tpWalkEnabled = on
+    if tpWalkThread then
+        tpWalkThread:Disconnect()
+        tpWalkThread = nil
+    end
+    if on then
+        tpWalkThread = RunService.Heartbeat:Connect(function(dt)
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if not (char and root and hum) then return end
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                root.CFrame = root.CFrame + moveDir * (tpWalkSpeed * dt)
+            end
+        end)
+    end
+end
+
+local function reapplySettings()
+    task.wait(1.5)
+    updateHumanoid()
+
+    if jumpEnabled and humanoid then
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = jumpValue
+    end
+
+    if tpWalkEnabled then toggleTpWalk(true) end
+
+    if noclipEnabled then
+        task.spawn(function()
+            while noclipEnabled and task.wait(0.05) do
+                if not player.Character then break end
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+
+    if followEnabled and followTarget then
+        task.spawn(function()
+            while followEnabled and task.wait(0.01) do
+                if not (player.Character and followTarget.Character) then break end
+                local myRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                local targetRoot = followTarget.Character:FindFirstChild("HumanoidRootPart")
+                if not (myRoot and targetRoot) then break end
+                local targetY = targetRoot.Position.Y
+                local behindVector = -targetRoot.CFrame.LookVector * followDistance
+                local targetPos = targetRoot.Position + behindVector
+                local newPos = Vector3.new(targetPos.X, targetY, targetPos.Z)
+                local lookAt = Vector3.new(targetRoot.Position.X, targetY, targetRoot.Position.Z)
+                local newCFrame = CFrame.new(newPos, lookAt)
+                if followMode == "Teleport" then
+                    myRoot.CFrame = newCFrame
+                elseif followMode == "Tween" then
+                    local tweenInfo = TweenInfo.new(0.02, Enum.EasingStyle.Linear)
+                    local tween = TweenService:Create(myRoot, tweenInfo, {CFrame = newCFrame})
+                    tween:Play()
+                end
+            end
+        end)
+    end
+end
+
+player.CharacterAdded:Connect(function(char)
+    humanoid = char:WaitForChild("Humanoid")
+    humanoid.Died:Connect(function()
+        Window:Notify({Title = "💀", Desc = "คุณตายแล้ว!", Time = 3})
+    end)
+    reapplySettings()
+end)
+
+local MainTab = Window:Tab({Title = "Main", Icon = "zap"}) do
+    MainTab:Toggle({
+        Title = "🏃 วิ่งเร็ว",
+        Value = false,
+        Callback = function(v) toggleTpWalk(v) end
+    })
+    MainTab:Slider({
+        Title = "⚡ ปรับความเร็ว",
+        Min = 1, Max = 5, Value = tpWalkLevel,
+        Callback = function(val) tpWalkLevel = val updateTpWalkSpeed() end
+    })
+    MainTab:Toggle({
+        Title = "🦘 กระโดดสูง",
+        Value = false,
+        Callback = function(v)
+            jumpEnabled = v
+            if humanoid then
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = v and jumpValue or 50
+            end
+        end
+    })
+    MainTab:Slider({
+        Title = "ปรับความสูง",
+        Min = 50, Max = 300, Value = jumpValue,
+        Callback = function(val)
+            jumpValue = val
+            if jumpEnabled and humanoid then
+                humanoid.JumpPower = val
+            end
+        end
+    })
+
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
 local buffEnabled = false
