@@ -371,10 +371,9 @@ MainTap:Button({
     end
 })
 
--- แท็บ Tp
-local TpTap = Window:CreatePage("Tp")
-local TpSection = TpTap:CreateSection("Teleport Zone")  
 
+local TPTab = Window:Tab({Title = "TP", Icon = "map-pin"})
+local selectedPlayerName, playerNames = "", {}
 
 local function goTree()
     local player = game.Players.LocalPlayer
@@ -383,7 +382,9 @@ local function goTree()
 
     hrp.CFrame = CFrame.new(470.88, 97.43, 2401.81)
 end
-
-TpSection:CreateButton("ไปหน้าคุก", function()
-    goTree()
-end)
+TPTab:Button({
+    Title = "ไปเอาปืน AK-47",
+    Callback = function()
+        goTree()
+    end
+})
