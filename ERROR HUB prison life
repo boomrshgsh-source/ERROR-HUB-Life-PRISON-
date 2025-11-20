@@ -370,79 +370,26 @@ MainTap:Button({
         goGetAK()
     end
 })
-local invisLocation = Vector3.new(250.0415802001953, 61.24081802368164, 2360.644775390625)
 
-local invis_on = false
+local TpTap = Window:Tab({Title = "Tp", Icon = "star"})
+TpTap:Section({Title = ""})
 
-local function setTransparency(character, transparency)
-    for _, part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("Decal") then
-            part.Transparency = transparency
-        end
-    end
-end
+local function goTree()
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
-local function setTransparency(character, transparency)
-    for _, part in pairs(character:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("Decal") then
-            part.Transparency = transparency
-        end
-    end
-end
+-- รอให้ตัวละครโหลด
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
 
-local function toggleInvisibility()
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-        return
-    end
-    
-    invis_on = not invis_on
-    sound:Play()
-    
-    if invis_on then
-        local savedpos = player.Character.HumanoidRootPart.CFrame
-        wait()
-        
-        -- ★ เปลี่ยนตำแหน่งใหม่ที่นี่ ★
-        player.Character:MoveTo(Vector3.new(250.0415802001953, 61.24081802368164, 2360.644775390625))
-        
-        wait(.15)
-        
-        local Seat = Instance.new('Seat', game.Workspace)
-        Seat.Anchored = false
-        Seat.CanCollide = false
-        Seat.Name = 'invischair'
-        Seat.Transparency = 1
-        
-        -- ★ ตำแหน่งเก้าอี้ใหม่ ★
-        Seat.Position = Vector3.new(250.0415802001953, 61.24081802368164, 2360.644775390625)
-        
-        local Weld = Instance.new("Weld", Seat)
-        Weld.Part0 = Seat
-        Weld.Part1 = player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso")
-        
-        wait()
-        Seat.CFrame = savedpos
-        
-        setTransparency(player.Character, 0.5)
-    else
-        local invisChair = workspace:FindFirstChild('invischair')
-        if invisChair then
-            invisChair:Destroy()
-        end
-        setTransparency(player.Character, 0)
-    end
-end
+-- กำหนดตำแหน่งเป้าหมาย
+local targetPosition = Vector3.new(470.88, 97.43, 2401.81)
 
-MainTap:Toggle({
-    Title = "ล่องหน",
-    Value = false,
-    Callback = function(value)
-        if value then
-            toggleInvisibility()
-        else
-            if invis_on then
-                toggleInvisibility()
-            end
-        end
+hrp.CFrame = CFrame.new(targetPosition)
+
+TpTap:Button({
+    Title = "ไปหน้าคุก",
+    Callback = function()
+        goTree()
     end
 })
