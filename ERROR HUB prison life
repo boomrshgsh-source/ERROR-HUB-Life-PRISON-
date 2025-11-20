@@ -363,7 +363,7 @@ local function goGetAK()
     end)
 end
 
--- ปุ่มใน UI เรียกฟังก์ชัน (แก้ไขแล้ว ใช้ MainTap ให้ตรงกัน)
+-- ปุ่มใน UI เรียกฟังก์ชัน
 MainTap:Button({
     Title = "ไปเอาปืน AK-47",
     Callback = function()
@@ -375,17 +375,16 @@ local TpTap = Window:Tab({Title = "Tp", Icon = "star"})
 TpTap:Section({Title = ""})
 
 local function goTree()
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
 
--- รอให้ตัวละครโหลด
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
+    local character = player.Character or player.CharacterAdded:Wait()
+    local hrp = character:WaitForChild("HumanoidRootPart")
 
--- กำหนดตำแหน่งเป้าหมาย
-local targetPosition = Vector3.new(470.88, 97.43, 2401.81)
+    local targetPosition = Vector3.new(470.88, 97.43, 2401.81)
 
-hrp.CFrame = CFrame.new(targetPosition)
+    hrp.CFrame = CFrame.new(targetPosition)
+end
 
 TpTap:Button({
     Title = "ไปหน้าคุก",
