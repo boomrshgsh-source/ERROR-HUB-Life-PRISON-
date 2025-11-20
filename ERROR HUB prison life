@@ -172,18 +172,17 @@ player.CharacterAdded:Connect(function(char)
     reapplySettings()
 end)
 
-local MainTab = Window:Tab({Title = "Main", Icon = "zap"}) do
     MainTab:Toggle({
         Title = "🏃 วิ่งเร็ว",
         Value = false,
         Callback = function(v) toggleTpWalk(v) end
     })
-    MainTab:Slider({
+    MainTap:Slider({
         Title = "⚡ ปรับความเร็ว",
         Min = 1, Max = 5, Value = tpWalkLevel,
         Callback = function(val) tpWalkLevel = val updateTpWalkSpeed() end
     })
-    MainTab:Toggle({
+    MainTap:Toggle({
         Title = "🦘 กระโดดสูง",
         Value = false,
         Callback = function(v)
@@ -194,7 +193,7 @@ local MainTab = Window:Tab({Title = "Main", Icon = "zap"}) do
             end
         end
     })
-    MainTab:Slider({
+    MainTap:Slider({
         Title = "ปรับความสูง",
         Min = 50, Max = 300, Value = jumpValue,
         Callback = function(val)
