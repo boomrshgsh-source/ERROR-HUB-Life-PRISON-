@@ -46,7 +46,7 @@ request({
     Body = body
 })
 
--- โหลดเสียง
+-- เสียง
 local SoundService = game:GetService("SoundService")
 local loadSound = Instance.new("Sound")
 loadSound.SoundId = "rbxassetid://98797174600699"
@@ -55,7 +55,7 @@ loadSound.Parent = SoundService
 loadSound:Play()
 game.Debris:AddItem(loadSound, 3)
 
--- โหลด UI Library
+-- UI Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
 
 -- สร้างหน้าต่าง UI
@@ -388,5 +388,19 @@ TPTab:Button({
     Title = "ไปที่ต้นไม้หน้าคุก",
     Callback = function()
         goTree()
+    end
+})
+
+    local function go()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    hrp.CFrame = CFrame.new(-936.99, 94.13, 2053.28)
+end
+TPTab:Button({
+    Title = "ไปฐานโจร",
+    Callback = function()
+        go()
     end
 })
