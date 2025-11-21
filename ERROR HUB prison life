@@ -55,37 +55,32 @@ loadSound.Parent = SoundService
 loadSound:Play()
 game.Debris:AddItem(loadSound, 3)
 
--- UI Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
 
--- สร้างหน้าต่าง UI
-local Window = Library:Window({
+-- UI Library
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- สร้างหน้าต่างหลัก
+local Window = WindUI:CreateWindow({
     Title = "ERROR HUB",
-    Desc = "PRISON LIFE",
-    Icon = 87372447687978,
-    Theme = "Dark",
-    Config = {
-        Keybind = Enum.KeyCode.LeftControl,
-        Size = UDim2.new(0, 350, 0, 300)
-    },
-    CloseUIButton = {
-        Enabled = true,
-        Text = "ERROR PRISON"
-    }
+    Icon = "door-open",
+    Author = "PRISON LIFE",
 })
 
--- ประกาศ Tab ชื่อ MainTap
-local MainTap = Window:Tab({Title = "Main", Icon = "star"})
-MainTap:Section({Title = ""})
+-- Main Tab
+local MainTab = Window:Tab({
+    Title = "Main",
+    Icon = "star",
+})
 
-
-
-
+-- Variables
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 local buffEnabled = false
+local esp, espEnabled, RunServiceConnection = {}, false, nil
 
--- ฟังก์ชันบัพปืน
+-- Buff Gun Functions
 local function BuffGun(tool)
     if not buffEnabled then return end
     if tool:IsA("Tool") then
@@ -133,42 +128,26 @@ end
 
 plr.Backpack.ChildAdded:Connect(HandleBuffOnTool)
 
--- Toggle สำหรับบัพปืนใน UI
-MainTap:Toggle({
+-- Toggle Buff Gun
+MainTab:Toggle({
     Title = "บัพปืน",
-    Value = false,
-    Callback = function(val)
-        buffEnabled = val
-        if buffEnabled then
-            for _, tool in pairs(plr.Backpack:GetChildren()) do
-                BuffGun(tool)
-            end
-            if plr.Character then
-                for _, tool in pairs(plr.Character:GetChildren()) do
-                    BuffGun(tool)
-                end
-            end
-        else
-            for _, tool in pairs(plr.Backpack:GetChildren()) do
-                ClearBuff(tool)
-            end
-            if plr.Character then
-                for _, tool in pairs(plr.Character:GetChildren()) do
-                    ClearBuff(tool)
-                end
+    Desc = "ทำให้ปืนยิงรัว",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        buffEnabled = state
+        for _, tool in pairs(plr.Backpack:GetChildren()) do
+            HandleBuffOnTool(tool)
+        end
+        if plr.Character then
+            for _, tool in pairs(plr.Character:GetChildren()) do
+                HandleBuffOnTool(tool)
             end
         end
     end
 })
 
--- ESP ส่วนนี้
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-
-local esp, espEnabled, RunServiceConnection = {}, false, nil
-
-repeat task.wait() until Camera and Camera.ViewportSize.X > 0
-
+-- ESP Functions
 local function createDrawsFor(plr)
     if esp[plr] then return end
 
@@ -258,16 +237,11 @@ local function updateESP()
                 local bottomRight = Vector2.new(rootScreen.X + width / 2, rootScreen.Y + height / 2)
 
                 for i, line in ipairs(d.BoxLines) do
-                    if i == 1 then
-                        line.From, line.To = topLeft, topRight
-                    elseif i == 2 then
-                        line.From, line.To = topRight, bottomRight
-                    elseif i == 3 then
-                        line.From, line.To = bottomRight, bottomLeft
-                    elseif i == 4 then
-                        line.From, line.To = bottomLeft, topLeft
+                    if i == 1 then line.From, line.To = topLeft, topRight
+                    elseif i == 2 then line.From, line.To = topRight, bottomRight
+                    elseif i == 3 then line.From, line.To = bottomRight, bottomLeft
+                    elseif i == 4 then line.From, line.To = bottomLeft, topLeft
                     end
-
                     line.Color = plr.Team and plr.Team.TeamColor.Color or Color3.fromRGB(170, 0, 255)
                     line.Visible = true
                 end
@@ -277,14 +251,10 @@ local function updateESP()
                 d.HealthBar.From = Vector2.new(topLeft.X - 6, bottomLeft.Y)
                 d.HealthBar.To = Vector2.new(topLeft.X - 6, bottomLeft.Y - healthBarHeight)
 
-                if healthPercent > 0.6 then
-                    d.HealthBar.Color = Color3.fromRGB(0, 255, 0)
-                elseif healthPercent > 0.3 then
-                    d.HealthBar.Color = Color3.fromRGB(255, 255, 0)
-                else
-                    d.HealthBar.Color = Color3.fromRGB(255, 0, 0)
+                if healthPercent > 0.6 then d.HealthBar.Color = Color3.fromRGB(0,255,0)
+                elseif healthPercent > 0.3 then d.HealthBar.Color = Color3.fromRGB(255,255,0)
+                else d.HealthBar.Color = Color3.fromRGB(255,0,0)
                 end
-
                 d.HealthBar.Visible = true
 
                 d.Line.From = topCenter
@@ -293,7 +263,7 @@ local function updateESP()
 
                 d.Text.Position = Vector2.new(rootScreen.X, topLeft.Y - 20)
                 d.Text.Text = string.format("%s [%.1fm]", plr.DisplayName, distance)
-                d.Text.Color = plr.Team and plr.Team.TeamColor.Color or Color3.new(1, 1, 1)
+                d.Text.Color = plr.Team and plr.Team.TeamColor.Color or Color3.new(1,1,1)
                 d.Text.Visible = true
             else
                 d.Line.Visible = false
@@ -309,17 +279,13 @@ local function startESP()
     if espEnabled then return end
     espEnabled = true
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= plr then
-            createDrawsFor(p)
-        end
+        if p ~= plr then createDrawsFor(p) end
     end
     RunServiceConnection = RunService.RenderStepped:Connect(updateESP)
     Players.PlayerAdded:Connect(function(p)
         if espEnabled and p ~= plr then createDrawsFor(p) end
     end)
-    Players.PlayerRemoving:Connect(function(p)
-        removeDrawsFor(p)
-    end)
+    Players.PlayerRemoving:Connect(removeDrawsFor)
 end
 
 local function stopESP()
@@ -329,78 +295,57 @@ local function stopESP()
     clearAllDraws()
 end
 
--- Toggle UI สำหรับ ESP
-MainTap:Toggle({
-    Title = "ESP มองคนในเซิฟ",
-    Value = false,
-    Callback = function(val)
-        if val then
-            startESP()
-        else
-            stopESP()
-        end
+-- ESP Toggle
+MainTab:Toggle({
+    Title = "มองคนในเซิฟ",
+    Desc = "ก็มองคนอะ:D",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        if state then startESP() else stopESP() end
     end
 })
 
--- ฟังก์ชัน TP และตรวจสอบ AK-47
-local function goGetAK()
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    local RunService = game:GetService("RunService")
-    
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = character:WaitForChild("HumanoidRootPart")
-
-    local originalCFrame = hrp.CFrame
-    local targetPosition = Vector3.new(-931.67, 99.73, 2039.29)
-
-    hrp.CFrame = CFrame.new(targetPosition)
-
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if LocalPlayer.Backpack:FindFirstChild("AK-47") then
-            hrp.CFrame = originalCFrame
-            connection:Disconnect()
-        end
-    end)
-end
-
--- ปุ่มใน UI เรียกฟังก์ชัน
-MainTap:Button({
-    Title = "ไปเอาปืน AK-47",
-    Callback = function()
-        goGetAK()
-    end
+-- TP Tab
+local TPTab = Window:Tab({
+    Title = "TP",
+    Icon = "map-pin"
 })
 
-
-local TPTab = Window:Tab({Title = "TP", Icon = "map-pin"})
-local selectedPlayerName, playerNames = "", {}
-
-local function goTree()
-    local player = game.Players.LocalPlayer
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(473.02, 109.78, 2395.03)
-end
+-- TP Buttons
 TPTab:Button({
     Title = "ไปที่ต้นไม้หน้าคุก",
     Callback = function()
-        goTree()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        hrp.CFrame = CFrame.new(473.02, 109.78, 2395.03)
     end
 })
 
-    local function go()
-    local player = game.Players.LocalPlayer
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(-936.99, 94.13, 2053.28)
-end
 TPTab:Button({
     Title = "ไปฐานโจร",
     Callback = function()
-        go()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        hrp.CFrame = CFrame.new(-936.99, 94.13, 2053.28)
+    end
+})
+
+TPTab:Button({
+    Title = "ไปเอาปืน AK-47",
+    Callback = function()
+        local char = plr.Character or plr.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local originalCFrame = hrp.CFrame
+        local targetPosition = Vector3.new(-931.67, 99.73, 2039.29)
+        hrp.CFrame = CFrame.new(targetPosition)
+
+        local conn
+        conn = RunService.RenderStepped:Connect(function()
+            if plr.Backpack:FindFirstChild("AK-47") then
+                hrp.CFrame = originalCFrame
+                conn:Disconnect()
+            end
+        end)
     end
 })
