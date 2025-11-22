@@ -418,8 +418,9 @@ MainTab:Slider({
 })
 
 local jumpEnabled = false
-local jumpPower = 200    
-local normalJump = 50      
+local jumpPower = 100
+local normalJump = 50
+
 local function ToggleJump(state)
     jumpEnabled = state
     local player = game.Players.LocalPlayer
