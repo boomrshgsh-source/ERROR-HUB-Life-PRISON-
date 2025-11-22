@@ -49,6 +49,8 @@ local mapThumbnail = mapJson.data[1].imageUrl or ""
 local placeId = game.PlaceId
 local placeName = Marketplace:GetProductInfo(placeId).Name
 
+local placeLink = "https://www.roblox.com/games/"..placeId
+
 local function GetThaiTimestamp()
     local time = os.date("!*t")
     time.hour = (time.hour + 7) % 24
@@ -70,7 +72,7 @@ end
 local data = {
     username = "ERROR HUB",
     embeds = {{
-        title = "🌌ERROR HUBชีวิตในคุกถูกใช้งาน",
+        title = "🌌ERROR HUB(prison life)ถูกใช้งาน",
         color = color,
         thumbnail = { url = avatarUrl },
         image = { url = mapThumbnail },
@@ -78,10 +80,10 @@ local data = {
         fields = {
             { name = "🌠 คนใช้", value = plr.Name, inline = true },
             { name = "📱 อุปกรณ์ที่ใช้", value = OS, inline = true },
-            { name = "🧰 ตัวรันที่ใช้", value = ExecutorText, inline = false },
-            { name = "🌍 แมพที่ใช้", value = placeName.." (`"..placeId.."`)", inline = false },
+            { name = "🧰 Executor", value = ExecutorText, inline = false },
+            { name = "🌍 ชื่อแมพ", value = "["..placeName.."]("..placeLink..")", inline = false },
             { name = "🆔 JobId", value = tostring(game.JobId), inline = false },
-            { name = "🕒 เวลา", value = timestamp, inline = false }
+            { name = "🕒 เวลาตอนรัน", value = timestamp, inline = false }
         }
     }}
 }
