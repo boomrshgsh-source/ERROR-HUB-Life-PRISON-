@@ -417,6 +417,45 @@ MainTab:Slider({
     end
 })
 
+local jumpEnabled = false
+local jumpPower = 200    
+local normalJump = 50      
+local function ToggleJump(state)
+    jumpEnabled = state
+    local player = game.Players.LocalPlayer
+
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        local hum = player.Character.Humanoid
+        hum.UseJumpPower = true
+
+        if jumpEnabled then
+            hum.JumpPower = jumpPower
+        else
+            hum.JumpPower = normalJump
+        end
+    end
+end
+
+MainTab:Toggle({
+    Title = "กระโดดสูง",
+    Value = false,
+    Callback = function(value)
+        ToggleJump(value)
+    end
+})
+
+MainTab:Slider({
+    Title = "ปรับความสูง",
+    Min = 50,
+    Max = 300,
+    Value = 100,
+    Callback = function(value)
+        jumpPower = value
+        if jumpEnabled then
+            ToggleJump(true)
+        end
+    end
+})
 
 local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
 TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
