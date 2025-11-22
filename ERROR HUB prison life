@@ -377,38 +377,7 @@ MainTab:Toggle({
         if v then startESP() else stopESP() end
     end
 })
-
-local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
-TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
-TPTab:Button({Title="ไปฐานโจร", Callback=function() TPToPosition(Vector3.new(-936.99,94.13,2053.28)) end})
-TPTab:Button({Title="ไปเอาปืน AK-47", Callback=function()
-    local char=plr.Character or plr.CharacterAdded:Wait()
-    local hrp=char:WaitForChild("HumanoidRootPart")
-    local originalCFrame=hrp.CFrame
-    local targetPos=Vector3.new(-931.67,99.73,2039.29)
-    hrp.CFrame=CFrame.new(targetPos)
-    local conn
-    conn=RunService.RenderStepped:Connect(function()
-        if plr.Backpack:FindFirstChild("AK-47") or (plr.Character and plr.Character:FindFirstChild("AK-47")) then
-            hrp.CFrame=originalCFrame
-            conn:Disconnect()
-        end
-    end)
-end})
-
-local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
-AimTab:Toggle({Title="ล็อคหัว", Desc="", Value=false, Callback=function(v)
-    AimLockEnabled=v
-    if v then startAim() else stopAim() end
-end})
-AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding=0, Value=Settings.FOVRadius, Callback=function(v)
-    Settings.FOVRadius=v
-    FOVCircle.Radius=v
-end})
-AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
-AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
-
--- walkspeed
+   -- walkspeed
 local walkSpeedEnabled = false
 local customSpeed = 50
 local normalSpeed = 16
@@ -447,3 +416,34 @@ MainTab:Slider({
         end
     end
 })
+
+
+local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
+TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
+TPTab:Button({Title="ไปฐานโจร", Callback=function() TPToPosition(Vector3.new(-936.99,94.13,2053.28)) end})
+TPTab:Button({Title="ไปเอาปืน AK-47", Callback=function()
+    local char=plr.Character or plr.CharacterAdded:Wait()
+    local hrp=char:WaitForChild("HumanoidRootPart")
+    local originalCFrame=hrp.CFrame
+    local targetPos=Vector3.new(-931.67,99.73,2039.29)
+    hrp.CFrame=CFrame.new(targetPos)
+    local conn
+    conn=RunService.RenderStepped:Connect(function()
+        if plr.Backpack:FindFirstChild("AK-47") or (plr.Character and plr.Character:FindFirstChild("AK-47")) then
+            hrp.CFrame=originalCFrame
+            conn:Disconnect()
+        end
+    end)
+end})
+
+local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
+AimTab:Toggle({Title="ล็อคหัว", Desc="", Value=false, Callback=function(v)
+    AimLockEnabled=v
+    if v then startAim() else stopAim() end
+end})
+AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding=0, Value=Settings.FOVRadius, Callback=function(v)
+    Settings.FOVRadius=v
+    FOVCircle.Radius=v
+end})
+AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
+AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
