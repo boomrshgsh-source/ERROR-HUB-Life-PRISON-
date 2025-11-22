@@ -3,36 +3,85 @@ local WEBHOOK_URL = "https://canary.discord.com/api/webhooks/1440700806495080511
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local Marketplace = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
 
 local plr = Players.LocalPlayer
 
-local thumbApi = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..plr.UserId.."&size=420x420&format=Png&isCircular=false"
-local response = game:HttpGet(thumbApi)
-local jsonData = HttpService:JSONDecode(response)
-local avatarUrl = jsonData.data[1].imageUrl or ""
+local function GetOS()
+    local platform = UserInputService:GetPlatform()
+    if platform == Enum.Platform.Windows then
+        return "Windows 💻"
+    elseif platform == Enum.Platform.IOS then
+        return "iOS 🍎"
+    elseif platform == Enum.Platform.Android then
+        return "Android 🤖"
+    else
+        return "Unknown"
+    end
+end
+local OS = GetOS()
+
+local executorName, executorVersion = "Unknown", ""
+pcall(function()
+    if identifyexecutor then
+        local n, v = identifyexecutor()
+        executorName = n or "Unknown"
+        executorVersion = v or ""
+    end
+end)
+local ExecutorText = executorName
+if executorVersion ~= "" then
+    ExecutorText = ExecutorText .. " | " .. executorVersion
+end
+
+local avatarApi = "https://thumbnails.roblox.com/v1/users/avatar?userIds=" ..
+    plr.UserId .. "&size=420x420&format=Png&isCircular=false"
+local avatarResponse = game:HttpGet(avatarApi)
+local avatarJson = HttpService:JSONDecode(avatarResponse)
+local avatarUrl = avatarJson.data[1].imageUrl or ""
+
+local mapApi = "https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" ..
+    game.PlaceId .. "&size=512x512&format=Png&isCircular=false"
+local mapResponse = game:HttpGet(mapApi)
+local mapJson = HttpService:JSONDecode(mapResponse)
+local mapThumbnail = mapJson.data[1].imageUrl or ""
 
 local placeId = game.PlaceId
 local placeName = Marketplace:GetProductInfo(placeId).Name
 
-local ScriptName = "ERROR HUB (PRISON LIFE)"
+local function GetThaiTimestamp()
+    local time = os.date("!*t")
+    time.hour = (time.hour + 7) % 24
+    return string.format("%02d-%02d-%02d %02d:%02d:%02d", time.day, time.month, time.year, time.hour, time.min, time.sec)
+end
+local timestamp = GetThaiTimestamp()
 
-local gifUrl = "https://cdn.discordapp.com/attachments/1440647049337901086/1440656393781772338/image0.gif?ex=691ef352&is=691da1d2&hm=6c214fb85de9394756af88b3c462494eda121ba661340cc0308656cb35a068b5&"
+local color = 0
+if OS == "Windows 💻" then
+    color = 3447003
+elseif OS == "Android 🤖" then
+    color = 3066993
+elseif OS == "iOS 🍎" then
+    color = 15158332
+else
+    color = 0
+end
 
 local data = {
     username = "ERROR HUB",
     embeds = {{
-        title = "🌌 ERROR HUB ถูกใช้งาน",
-        color = 16711680,
-
+        title = "🌌ERROR HUBชีวิตในคุกถูกใช้งาน",
+        color = color,
         thumbnail = { url = avatarUrl },
-
-        image = { url = gifUrl },
-
+        image = { url = mapThumbnail },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
         fields = {
             { name = "🌠 คนใช้", value = plr.Name, inline = true },
-            { name = "📄 ชื่อสคริปต์", value = ScriptName, inline = false },
+            { name = "📱 อุปกรณ์ที่ใช้", value = OS, inline = true },
+            { name = "🧰 ตัวรันที่ใช้", value = ExecutorText, inline = false },
             { name = "🌍 แมพที่ใช้", value = placeName.." (`"..placeId.."`)", inline = false },
-            { name = "🆔 JobId", value = tostring(game.JobId), inline = false } -- เพิ่ม JobId
+            { name = "🆔 JobId", value = tostring(game.JobId), inline = false },
+            { name = "🕒 เวลา", value = timestamp, inline = false }
         }
     }}
 }
