@@ -56,31 +56,32 @@ loadSound:Play()
 game.Debris:AddItem(loadSound, 3)
 
 
--- UI Library
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+-- Load x2zu UI Library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
 
--- สร้างหน้าต่างหลัก
-local Window = WindUI:CreateWindow({
+local Window = Library:Window({
     Title = "ERROR HUB",
-    Icon = "door-open",
-    Author = "PRISON LIFE",
+    Desc = "PRISON LIFE",
+    Icon = 87372447687978,
+    Theme = "Dark",
+    Config = {
+        Keybind = Enum.KeyCode.LeftControl,
+        Size = UDim2.new(0, 500, 0, 250) 
+    },
+    CloseUIButton = { Enabled = true, Text = "ERROR PRISON LIFE" }
 })
 
--- Main Tab
-local MainTab = Window:Tab({
-    Title = "Main",
-    Icon = "star",
-})
-
--- Variables
+-- Services
 local Players = game:GetService("Players")
 local plr = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+
+-- Variables
 local buffEnabled = false
 local esp, espEnabled, RunServiceConnection = {}, false, nil
 
--- Buff Gun Functions
+-- ===================== Buff Gun =====================
 local function BuffGun(tool)
     if not buffEnabled then return end
     if tool:IsA("Tool") then
@@ -128,43 +129,23 @@ end
 
 plr.Backpack.ChildAdded:Connect(HandleBuffOnTool)
 
--- Toggle Buff Gun
-MainTab:Toggle({
-    Title = "บัพปืน",
-    Desc = "ทำให้ปืนยิงรัว",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(state)
-        buffEnabled = state
-        for _, tool in pairs(plr.Backpack:GetChildren()) do
-            HandleBuffOnTool(tool)
-        end
-        if plr.Character then
-            for _, tool in pairs(plr.Character:GetChildren()) do
-                HandleBuffOnTool(tool)
-            end
-        end
-    end
-})
-
--- ESP Functions
-local function createDrawsFor(plr)
-    if esp[plr] then return end
-
+-- ===================== ESP =====================
+local function createDrawsFor(p)
+    if esp[p] then return end
     local line = Drawing.new("Line")
-    line.Color = Color3.fromRGB(170, 0, 255)
+    line.Color = Color3.fromRGB(170,0,255)
     line.Thickness = 1.6
     line.Transparency = 1
     line.Visible = false
 
     local boxLines = {}
-    for i = 1, 4 do
+    for i=1,4 do
         local l = Drawing.new("Line")
-        l.Color = Color3.fromRGB(170, 0, 255)
+        l.Color = Color3.fromRGB(170,0,255)
         l.Thickness = 1.4
         l.Transparency = 1
         l.Visible = false
-        table.insert(boxLines, l)
+        table.insert(boxLines,l)
     end
 
     local healthBar = Drawing.new("Line")
@@ -173,103 +154,98 @@ local function createDrawsFor(plr)
     healthBar.Visible = false
 
     local txt = Drawing.new("Text")
-    txt.Color = Color3.fromRGB(255, 255, 255)
+    txt.Color = Color3.fromRGB(255,255,255)
     txt.Size = 14
     txt.Center = true
     txt.Outline = true
     txt.Font = 2
     txt.Visible = false
 
-    esp[plr] = { Line = line, BoxLines = boxLines, Text = txt, HealthBar = healthBar }
+    esp[p] = {Line=line, BoxLines=boxLines, HealthBar=healthBar, Text=txt}
 end
 
-local function removeDrawsFor(plr)
-    local o = esp[plr]
-    if not o then return end
-    if o.Line then o.Line:Remove() end
-    for _, l in pairs(o.BoxLines or {}) do l:Remove() end
-    if o.Text then o.Text:Remove() end
-    if o.HealthBar then o.HealthBar:Remove() end
-    esp[plr] = nil
+local function removeDrawsFor(p)
+    local d = esp[p]
+    if not d then return end
+    if d.Line then d.Line:Remove() end
+    for _, l in pairs(d.BoxLines or {}) do l:Remove() end
+    if d.HealthBar then d.HealthBar:Remove() end
+    if d.Text then d.Text:Remove() end
+    esp[p] = nil
 end
 
 local function clearAllDraws()
-    for plr in pairs(esp) do removeDrawsFor(plr) end
+    for p in pairs(esp) do removeDrawsFor(p) end
 end
 
 local function updateESP()
     if not espEnabled then return end
     local viewport = Camera.ViewportSize
-    local topCenter = Vector2.new(viewport.X * 0.5, 0)
-
-    for plr, d in pairs(esp) do
-        local char = plr.Character
+    local topCenter = Vector2.new(viewport.X/2, 0)
+    for p,d in pairs(esp) do
+        local char = p.Character
         if not char then
-            d.Line.Visible = false
-            for _, l in pairs(d.BoxLines) do l.Visible = false end
-            d.Text.Visible = false
-            d.HealthBar.Visible = false
+            d.Line.Visible=false
+            for _,l in pairs(d.BoxLines) do l.Visible=false end
+            d.Text.Visible=false
+            d.HealthBar.Visible=false
         else
             local head = char:FindFirstChild("Head")
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             if not head or not hrp or not humanoid then
-                d.Line.Visible = false
-                for _, l in pairs(d.BoxLines) do l.Visible = false end
-                d.Text.Visible = false
-                d.HealthBar.Visible = false
-                continue
-            end
-
-            local rootScreen, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            local headScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.4, 0))
-            local footScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 2.5, 0))
-
-            if onScreen then
-                local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-
-                local height = math.abs(headScreen.Y - footScreen.Y)
-                local width = height / 2
-
-                local topLeft = Vector2.new(rootScreen.X - width / 2, rootScreen.Y - height / 2)
-                local topRight = Vector2.new(rootScreen.X + width / 2, rootScreen.Y - height / 2)
-                local bottomLeft = Vector2.new(rootScreen.X - width / 2, rootScreen.Y + height / 2)
-                local bottomRight = Vector2.new(rootScreen.X + width / 2, rootScreen.Y + height / 2)
-
-                for i, line in ipairs(d.BoxLines) do
-                    if i == 1 then line.From, line.To = topLeft, topRight
-                    elseif i == 2 then line.From, line.To = topRight, bottomRight
-                    elseif i == 3 then line.From, line.To = bottomRight, bottomLeft
-                    elseif i == 4 then line.From, line.To = bottomLeft, topLeft
-                    end
-                    line.Color = plr.Team and plr.Team.TeamColor.Color or Color3.fromRGB(170, 0, 255)
-                    line.Visible = true
-                end
-
-                local healthPercent = humanoid.Health / humanoid.MaxHealth
-                local healthBarHeight = height * healthPercent
-                d.HealthBar.From = Vector2.new(topLeft.X - 6, bottomLeft.Y)
-                d.HealthBar.To = Vector2.new(topLeft.X - 6, bottomLeft.Y - healthBarHeight)
-
-                if healthPercent > 0.6 then d.HealthBar.Color = Color3.fromRGB(0,255,0)
-                elseif healthPercent > 0.3 then d.HealthBar.Color = Color3.fromRGB(255,255,0)
-                else d.HealthBar.Color = Color3.fromRGB(255,0,0)
-                end
-                d.HealthBar.Visible = true
-
-                d.Line.From = topCenter
-                d.Line.To = Vector2.new(rootScreen.X, rootScreen.Y)
-                d.Line.Visible = true
-
-                d.Text.Position = Vector2.new(rootScreen.X, topLeft.Y - 20)
-                d.Text.Text = string.format("%s [%.1fm]", plr.DisplayName, distance)
-                d.Text.Color = plr.Team and plr.Team.TeamColor.Color or Color3.new(1,1,1)
-                d.Text.Visible = true
+                d.Line.Visible=false
+                for _,l in pairs(d.BoxLines) do l.Visible=false end
+                d.Text.Visible=false
+                d.HealthBar.Visible=false
             else
-                d.Line.Visible = false
-                for _, l in pairs(d.BoxLines) do l.Visible = false end
-                d.Text.Visible = false
-                d.HealthBar.Visible = false
+                local rootScreen,onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local headScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.4,0))
+                local footScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0,2.5,0))
+
+                if onScreen then
+                    local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+                    local height = math.abs(headScreen.Y - footScreen.Y)
+                    local width = height/2
+                    local topLeft = Vector2.new(rootScreen.X-width/2, rootScreen.Y-height/2)
+                    local topRight = Vector2.new(rootScreen.X+width/2, rootScreen.Y-height/2)
+                    local bottomLeft = Vector2.new(rootScreen.X-width/2, rootScreen.Y+height/2)
+                    local bottomRight = Vector2.new(rootScreen.X+width/2, rootScreen.Y+height/2)
+
+                    for i,line in ipairs(d.BoxLines) do
+                        if i==1 then line.From,line.To = topLeft,topRight
+                        elseif i==2 then line.From,line.To = topRight,bottomRight
+                        elseif i==3 then line.From,line.To = bottomRight,bottomLeft
+                        elseif i==4 then line.From,line.To = bottomLeft,topLeft
+                        end
+                        line.Color = p.Team and p.Team.TeamColor.Color or Color3.fromRGB(170,0,255)
+                        line.Visible=true
+                    end
+
+                    local healthPercent = humanoid.Health/humanoid.MaxHealth
+                    local healthBarHeight = height*healthPercent
+                    d.HealthBar.From = Vector2.new(topLeft.X-6,bottomLeft.Y)
+                    d.HealthBar.To = Vector2.new(topLeft.X-6,bottomLeft.Y-healthBarHeight)
+                    if healthPercent>0.6 then d.HealthBar.Color = Color3.fromRGB(0,255,0)
+                    elseif healthPercent>0.3 then d.HealthBar.Color=Color3.fromRGB(255,255,0)
+                    else d.HealthBar.Color=Color3.fromRGB(255,0,0)
+                    end
+                    d.HealthBar.Visible=true
+
+                    d.Line.From=topCenter
+                    d.Line.To=Vector2.new(rootScreen.X, rootScreen.Y)
+                    d.Line.Visible=true
+
+                    d.Text.Position=Vector2.new(rootScreen.X, topLeft.Y-20)
+                    d.Text.Text=string.format("%s [%.1fm]", p.DisplayName, distance)
+                    d.Text.Color = p.Team and p.Team.TeamColor.Color or Color3.new(1,1,1)
+                    d.Text.Visible=true
+                else
+                    d.Line.Visible=false
+                    for _,l in pairs(d.BoxLines) do l.Visible=false end
+                    d.Text.Visible=false
+                    d.HealthBar.Visible=false
+                end
             end
         end
     end
@@ -277,75 +253,157 @@ end
 
 local function startESP()
     if espEnabled then return end
-    espEnabled = true
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= plr then createDrawsFor(p) end
-    end
+    espEnabled=true
+    for _,p in ipairs(Players:GetPlayers()) do if p~=plr then createDrawsFor(p) end end
     RunServiceConnection = RunService.RenderStepped:Connect(updateESP)
-    Players.PlayerAdded:Connect(function(p)
-        if espEnabled and p ~= plr then createDrawsFor(p) end
-    end)
+    Players.PlayerAdded:Connect(function(p) if espEnabled and p~=plr then createDrawsFor(p) end end)
     Players.PlayerRemoving:Connect(removeDrawsFor)
 end
 
 local function stopESP()
     if not espEnabled then return end
-    espEnabled = false
-    if RunServiceConnection then RunServiceConnection:Disconnect() RunServiceConnection = nil end
+    espEnabled=false
+    if RunServiceConnection then RunServiceConnection:Disconnect() RunServiceConnection=nil end
     clearAllDraws()
 end
 
--- ESP Toggle
-MainTab:Toggle({
-    Title = "มองคนในเซิฟ",
-    Desc = "ก็มองคนอะ:D",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(state)
-        if state then startESP() else stopESP() end
-    end
-})
+-- ===================== TP =====================
+local function TPToPosition(pos)
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(pos)
+end
 
--- TP Tab
-local TPTab = Window:Tab({
-    Title = "TP",
-    Icon = "map-pin"
-})
+-- ===================== Aimbot =====================
+local Settings = {
+    FOVRadius=150,
+    AimPart="Head",
+    TeamCheck=true,
+    WallCheck=true,
+    HealthCheck=true,
+}
 
--- TP Buttons
-TPTab:Button({
-    Title = "ไปที่ต้นไม้หน้าคุก",
-    Callback = function()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        hrp.CFrame = CFrame.new(473.02, 109.78, 2395.03)
-    end
-})
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255,255,255)
+FOVCircle.Radius = Settings.FOVRadius
+FOVCircle.Thickness = 2
+FOVCircle.Filled=false
+FOVCircle.Visible=false
 
-TPTab:Button({
-    Title = "ไปฐานโจร",
-    Callback = function()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        hrp.CFrame = CFrame.new(-936.99, 94.13, 2053.28)
-    end
-})
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+end)
 
-TPTab:Button({
-    Title = "ไปเอาปืน AK-47",
-    Callback = function()
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        local originalCFrame = hrp.CFrame
-        local targetPosition = Vector3.new(-931.67, 99.73, 2039.29)
-        hrp.CFrame = CFrame.new(targetPosition)
+local AimConnection
+local AimLockEnabled=false
 
-        local conn
-        conn = RunService.RenderStepped:Connect(function()
-            if plr.Backpack:FindFirstChild("AK-47") then
-                hrp.CFrame = originalCFrame
-                conn:Disconnect()
+local function IsVisible(targetPart)
+    if not Settings.WallCheck then return true end
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {plr.Character}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local result = workspace:Raycast(origin, direction, raycastParams)
+    if result then return result.Instance:IsDescendantOf(targetPart.Parent) end
+    return true
+end
+
+local function GetClosestTarget()
+    local closestPlayer=nil
+    local shortestDistance=math.huge
+    for _,p in pairs(Players:GetPlayers()) do
+        if p~=plr and p.Character and p.Character:FindFirstChild(Settings.AimPart) then
+            if Settings.TeamCheck and p.Team==plr.Team then continue end
+            local targetPart = p.Character[Settings.AimPart]
+            local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
+            if Settings.HealthCheck and (not humanoid or humanoid.Health<=0) then continue end
+            local screenPos,onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            if onScreen then
+                local distanceFromCenter = (Vector2.new(screenPos.X,screenPos.Y)-Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                local distanceFromPlayer = (plr.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude
+                if distanceFromCenter<=Settings.FOVRadius and distanceFromPlayer<shortestDistance and IsVisible(targetPart) then
+                    closestPlayer=p
+                    shortestDistance=distanceFromPlayer
+                end
             end
-        end)
+        end
+    end
+    return closestPlayer
+end
+
+local function startAim()
+    if AimConnection then return end
+    FOVCircle.Visible=true
+    AimConnection=RunService.RenderStepped:Connect(function()
+        if not plr.Character then return end
+        local target=GetClosestTarget()
+        if target then
+            local targetPos=target.Character[Settings.AimPart].Position
+            Camera.CFrame=CFrame.new(Camera.CFrame.Position,targetPos)
+        end
+    end)
+end
+
+local function stopAim()
+    if AimConnection then
+        AimConnection:Disconnect()
+        AimConnection=nil
+    end
+    FOVCircle.Visible=false
+end
+
+-- ===================== UI Tabs =====================
+local MainTab = Window:Tab({Title="Main", Icon="star"})
+
+MainTab:Toggle({
+    Title="Buff ปืน",
+    Desc="ทำให้ปืนยิงรัว",
+    Value=false,
+    Callback=function(v)
+        buffEnabled=v
+        for _,tool in pairs(plr.Backpack:GetChildren()) do HandleBuffOnTool(tool) end
+        if plr.Character then
+            for _,tool in pairs(plr.Character:GetChildren()) do HandleBuffOnTool(tool) end
+        end
     end
 })
+
+MainTab:Toggle({
+    Title="มองคนในเซิฟ",
+    Desc="",
+    Value=false,
+    Callback=function(v)
+        if v then startESP() else stopESP() end
+    end
+})
+
+local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
+TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
+TPTab:Button({Title="ไปฐานโจร", Callback=function() TPToPosition(Vector3.new(-936.99,94.13,2053.28)) end})
+TPTab:Button({Title="ไปเอาปืน AK-47", Callback=function()
+    local char=plr.Character or plr.CharacterAdded:Wait()
+    local hrp=char:WaitForChild("HumanoidRootPart")
+    local originalCFrame=hrp.CFrame
+    local targetPos=Vector3.new(-931.67,99.73,2039.29)
+    hrp.CFrame=CFrame.new(targetPos)
+    local conn
+    conn=RunService.RenderStepped:Connect(function()
+        if plr.Backpack:FindFirstChild("AK-47") or (plr.Character and plr.Character:FindFirstChild("AK-47")) then
+            hrp.CFrame=originalCFrame
+            conn:Disconnect()
+        end
+    end)
+end})
+
+local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
+AimTab:Toggle({Title="ล็อคหัว", Desc="", Value=false, Callback=function(v)
+    AimLockEnabled=v
+    if v then startAim() else stopAim() end
+end})
+AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding=0, Value=Settings.FOVRadius, Callback=function(v)
+    Settings.FOVRadius=v
+    FOVCircle.Radius=v
+end})
+AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
+AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
