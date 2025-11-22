@@ -407,3 +407,43 @@ AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding
 end})
 AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
 AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
+
+-- walkspeed
+local walkSpeedEnabled = false
+local customSpeed = 50
+local normalSpeed = 16
+
+local function ToggleWalkSpeed(state)
+    walkSpeedEnabled = state
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+        if walkSpeedEnabled then
+            player.Character.Humanoid.WalkSpeed = customSpeed
+        else
+            player.Character.Humanoid.WalkSpeed = normalSpeed
+        end
+    end
+end
+
+-- UI Toggle
+MainTab:Toggle({
+    Title = "วิ่งเร็ว",
+    Value = false,
+    Callback = function(value)
+        ToggleWalkSpeed(value)
+    end
+})
+
+-- Slider สำหรับปรับความเร็ว
+MainTab:Slider({
+    Title = "ปรับความเร็ว",
+    Min = 16,
+    Max = 200,
+    Value = 50,
+    Callback = function(value)
+        customSpeed = value
+        if walkSpeedEnabled then
+            ToggleWalkSpeed(true) -- อัปเดตทันทีเมื่อเลื่อน Slider
+        end
+    end
+})
