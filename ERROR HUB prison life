@@ -796,9 +796,9 @@ RunService.RenderStepped:Connect(function()
 end)
 
 AimTab:Toggle({
-    Title = "Silent Aim + Rainbow Beam",
+    Title = "Silent Aim,
     Value = false,
-    Desc = "กระสุนตามหัวคมๆ + เส้นสีรุ้งชัด",
+    Desc = "กระสุนตามหัวคมๆ",
     Callback = function(value)
         Toggle(value)
     end
