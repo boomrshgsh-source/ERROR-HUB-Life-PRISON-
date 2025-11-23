@@ -795,7 +795,7 @@ RunService.RenderStepped:Connect(function()
         if enemyPart then enemyPart:Destroy(); enemyPart=nil end
     end
 end)
-
+print("Silent Aimbot By DayToDay2044 addr=",castRay)
 
 AimTab:Toggle({
     Title = "Silent Aim",
