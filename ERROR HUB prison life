@@ -605,6 +605,7 @@ end)
 
 MainTab:Toggle({
     Title = "🛡️ Anti‑Tase",
+    Desc = "ป้องกันเลเซอร์",
     Value = false,
     Callback = function(value)
         antiTaseActive = value
@@ -614,6 +615,45 @@ MainTab:Toggle({
     end
 })
 
+  
+local plr = game.Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
+
+local arrestAuraEnabled = false -- เริ่มปิด
+local AURA_DISTANCE = 20 
+
+local function arrestPlayer(target)
+    if target.Character then
+        arrestRemote:InvokeServer(target)
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not arrestAuraEnabled then return end
+    local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    for _, other in pairs(Players:GetPlayers()) do
+        if other ~= plr and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (root.Position - other.Character.HumanoidRootPart.Position).Magnitude
+            if dist <= AURA_DISTANCE then
+                arrestPlayer(other)
+            end
+        end
+    end
+end)
+
+MainTab:Toggle({
+    Title = "จับออร่า",
+    Desc = "ต้องเป็นตำรวจ",
+    Value = false,
+    Callback = function(v)
+        arrestAuraEnabled = v
+    end
+})
 local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
 TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
 TPTab:Button({Title="ไปฐานโจร", Callback=function() TPToPosition(Vector3.new(-936.99,94.13,2053.28)) end})
