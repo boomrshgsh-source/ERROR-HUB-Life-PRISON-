@@ -675,6 +675,7 @@ local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
+
 local function getTarget()
     if not getgenv().SilentAimbot then return end
     local best, dist = nil, 1e9
@@ -770,7 +771,7 @@ RunService.RenderStepped:Connect(function()
             if not currentBeam then
                 currentBeam, att0, att1 = createBeam(myPart, enemyPart)
             end
-            -- อัปเดตตำแหน่งทุกเฟรม
+            
             myPart.CFrame = LP.Character.Head.CFrame
             enemyPart.CFrame = targetHead.CFrame
         else
@@ -795,8 +796,9 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+
 AimTab:Toggle({
-    Title = "Silent Aim,
+    Title = "Silent Aim",
     Value = false,
     Desc = "กระสุนตามหัวคมๆ",
     Callback = function(value)
