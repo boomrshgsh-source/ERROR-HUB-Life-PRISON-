@@ -535,7 +535,7 @@ local function ToggleDamageAura(state)
                         end
                     end
                 end
-                task.wait(0.01)
+                task.wait(0.2)
             end
         end)
     end
@@ -574,6 +574,43 @@ MainTab:Toggle({
     Value = false,
     Callback = function(value)
         ToggleDamageAura(value)
+    end
+})
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local antiTaseActive = false
+
+local function applyAntiTase()
+    local gunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
+    if not gunRemotes then return end
+
+    local playerTased = gunRemotes:FindFirstChild("PlayerTased")
+    if playerTased then
+        -- Remote หลอก
+        local fakeEvent = playerTased:Clone()
+        fakeEvent.Parent = gunRemotes
+
+        playerTased:Destroy()
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if antiTaseActive then
+        task.wait(0.5)
+        applyAntiTase()
+    end
+end)
+
+MainTab:Toggle({
+    Title = "🛡️ Anti‑Tase",
+    Value = false,
+    Callback = function(value)
+        antiTaseActive = value
+        if antiTaseActive then
+            applyAntiTase()
+        end
     end
 })
 
