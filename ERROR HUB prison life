@@ -794,7 +794,6 @@ RunService.RenderStepped:Connect(function()
         if enemyPart then enemyPart:Destroy(); enemyPart=nil end
     end
 end)
-
 AimTab:Toggle({
     Title = "Silent Aim,
     Value = false,
