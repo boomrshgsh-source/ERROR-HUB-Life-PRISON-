@@ -675,7 +675,7 @@ local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
-
+print("Silent Aimbot By DayToDay2044 addr=",castRay)
 local function getTarget()
     if not getgenv().SilentAimbot then return end
     local best, dist = nil, 1e9
@@ -795,7 +795,6 @@ RunService.RenderStepped:Connect(function()
         if enemyPart then enemyPart:Destroy(); enemyPart=nil end
     end
 end)
-print("Silent Aimbot By DayToDay2044 addr=",castRay)
 
 AimTab:Toggle({
     Title = "Silent Aim",
