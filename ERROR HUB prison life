@@ -513,38 +513,40 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local melee = ReplicatedStorage:WaitForChild("meleeEvent")
-local DamageAuraActive = false -- เริ่มปิด
+local DamageAuraActive = false
 
--- ฟังก์ชันเปิด/ปิด Damage Aura
+-- แทนที่จะ spawn หลายครั้ง เราจะเก็บ thread ไว้
+local DamageAuraThread
+
 local function ToggleDamageAura(state)
     DamageAuraActive = state
 
-    if state then
-        task.spawn(function()
+    if state and not DamageAuraThread then
+        DamageAuraThread = task.spawn(function()
             while DamageAuraActive do
                 for _, plr in ipairs(Players:GetPlayers()) do
                     if plr ~= LocalPlayer then
                         local char = plr.Character
                         if char and char:FindFirstChild("HumanoidRootPart") then
                             pcall(function()
-                                -- ส่ง melee event ไปยัง Character ของผู้เล่น
                                 melee:FireServer(char)
                             end)
                         end
                     end
                 end
-                task.wait(0.01) -- ความถี่ 0.01 วินาที
+                task.wait(0.01)
             end
+            DamageAuraThread = nil -- เคลียร์ thread เมื่อปิด
         end)
     end
 end
 
--- UI Toggle บน MainTab
+-- UI Toggle
 MainTab:Toggle({
     Title = "ดาเมจออร่า",
     Value = false,
     Callback = function(value)
-        ToggleDamageAura(value) -- เรียกฟังก์ชันของเรา
+        ToggleDamageAura(value)
     end
 })
 
