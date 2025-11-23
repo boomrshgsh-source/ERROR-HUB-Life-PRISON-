@@ -508,6 +508,45 @@ MainTab:Slider({
         end
     end
 })
+    local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local melee = ReplicatedStorage:WaitForChild("meleeEvent")
+local DamageAuraActive = false -- เริ่มปิด
+
+-- ฟังก์ชันเปิด/ปิด Damage Aura
+local function ToggleDamageAura(state)
+    DamageAuraActive = state
+
+    if state then
+        task.spawn(function()
+            while DamageAuraActive do
+                for _, plr in ipairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer then
+                        local char = plr.Character
+                        if char and char:FindFirstChild("HumanoidRootPart") then
+                            pcall(function()
+                                -- ส่ง melee event ไปยัง Character ของผู้เล่น
+                                melee:FireServer(char)
+                            end)
+                        end
+                    end
+                end
+                task.wait(0.01) -- ความถี่ 0.01 วินาที
+            end
+        end)
+    end
+end
+
+-- UI Toggle บน MainTab
+MainTab:Toggle({
+    Title = "ดาเมจออร่า",
+    Value = false,
+    Callback = function(value)
+        ToggleDamageAura(value) -- เรียกฟังก์ชันของเรา
+    end
+})
 
 local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
 TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
