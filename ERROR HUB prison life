@@ -522,14 +522,16 @@ local function ToggleDamageAura(state)
     if state then
         task.spawn(function()
             while DamageAuraActive do
-                -- รอให้ตัวละครของเราอยู่และยังไม่ตาย
+                -- รอให้ตัวเองมีตัวละครและยังไม่ตาย
                 if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character.Humanoid.Health > 0 then
                     for _, plr in ipairs(Players:GetPlayers()) do
-                        -- ยกเว้นตัวเราเอง และตรวจสอบเป้าหมายยังมีชีวิตอยู่
-                        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
-                            pcall(function()
-                                melee:FireServer(plr)
-                            end)
+                        if plr ~= LocalPlayer then
+                            local char = plr.Character
+                            if char and char:FindFirstChild("Humanoid") then
+                                pcall(function()
+                                    melee:FireServer(plr)
+                                end)
+                            end
                         end
                     end
                 end
@@ -539,15 +541,34 @@ local function ToggleDamageAura(state)
     end
 end
 
--- damge
+-- ฟังก์ชันช่วยให้ Damage Aura ยิงอัตโนมัติเมื่อผู้เล่น respawn
+local function setupRespawnListener(player)
+    player.CharacterAdded:Connect(function(char)
+        -- ตัว loop หลักจะตรวจสอบเองทุก 0.01 วินาที
+        -- เราแค่รอให้ Character โหลดเสร็จ
+        task.wait(0.1)
+    end)
+end
+
+-- ตั้ง listener ให้ทุกคนในเกม
+for _, plr in ipairs(Players:GetPlayers()) do
+    setupRespawnListener(plr)
+end
+
+-- listener สำหรับผู้เล่นใหม่ที่เข้ามา
+Players.PlayerAdded:Connect(function(plr)
+    setupRespawnListener(plr)
+end)
+
+-- listener สำหรับ respawn ตัวเอง
 LocalPlayer.CharacterAdded:Connect(function(char)
     if DamageAuraActive then
-        task.wait(0.1) -- รอให้ Humanoid โหลดเสร็จ
+        task.wait(0.1)
         ToggleDamageAura(true)
     end
 end)
 
--- togglekillaura
+-- เพิ่ม toggle ใน MainTab
 MainTab:Toggle({
     Title = "ดาเมจออร่า",
     Value = false,
