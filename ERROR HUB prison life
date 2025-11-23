@@ -512,7 +512,7 @@ MainTab:Slider({
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local melee = ReplicatedStorage:WaitForChild("meleeEvent")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
 local DamageAuraActive = false
 
@@ -522,23 +522,35 @@ local function ToggleDamageAura(state)
     if state then
         task.spawn(function()
             while DamageAuraActive do
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    if plr ~= LocalPlayer then
-                        pcall(function()
-                            melee:FireServer(plr)
-                        end)
+                -- รอให้ตัวละครของเราอยู่และยังไม่ตาย
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and LocalPlayer.Character.Humanoid.Health > 0 then
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        -- ยกเว้นตัวเราเอง และตรวจสอบเป้าหมายยังมีชีวิตอยู่
+                        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+                            pcall(function()
+                                melee:FireServer(plr)
+                            end)
+                        end
                     end
                 end
-                task.wait(0.01) -- delay 0.01 วินาที
+                task.wait(0.01)
             end
         end)
     end
 end
 
--- เพิ่ม toggle ใน MainTab
+-- damge
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if DamageAuraActive then
+        task.wait(0.1) -- รอให้ Humanoid โหลดเสร็จ
+        ToggleDamageAura(true)
+    end
+end)
+
+-- togglekillaura
 MainTab:Toggle({
     Title = "ดาเมจออร่า",
-    Value = false, -- ปิดเริ่มต้น
+    Value = false,
     Callback = function(value)
         ToggleDamageAura(value)
     end
