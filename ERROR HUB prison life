@@ -669,19 +669,8 @@ TPTab:Button({Title="ไปเอาปืน AK-47", Callback=function()
 end})
 
 local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
-AimTab:Toggle({Title="ล็อคหัว", Desc="", Value=false, Callback=function(v)
-    AimLockEnabled=v
-    if v then startAim() else stopAim() end
-end})
-AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding=0, Value=Settings.FOVRadius, Callback=function(v)
-    Settings.FOVRadius=v
-    FOVCircle.Radius=v
-end})
-AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
-AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
 
 getgenv().SilentAimbot = false
-
 local LP = game.Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local function getTarget()
@@ -736,3 +725,16 @@ Callback = function(value)
 Toggle(value)
 end
 })
+
+
+AimTab:Toggle({Title="ล็อคหัว", Desc="", Value=false, Callback=function(v)
+    AimLockEnabled=v
+    if v then startAim() else stopAim() end
+end})
+AimTab:Slider({Title="ปรับขนาดวง", Min=50, Max=500, Rounding=0, Value=Settings.FOVRadius, Callback=function(v)
+    Settings.FOVRadius=v
+    FOVCircle.Radius=v
+end})
+AimTab:Toggle({Title="ไม่ล็อคทีมเดียวกัน", Desc="", Value=Settings.TeamCheck, Callback=function(v) Settings.TeamCheck=v end})
+AimTab:Toggle({Title="ไม่ล็อคคนที่อยู่หลังกำแพง", Desc="", Value=Settings.WallCheck, Callback=function(v) Settings.WallCheck=v end})
+
