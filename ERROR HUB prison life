@@ -707,8 +707,6 @@ for _,fn in ipairs(getgc(true)) do
     if castRay then break end
 end
 
-print("Silent Aimbot By DayToDay2044 addr=",castRay)
-
 if castRay then
     local old; old = hookfunction(castRay, function(a,b,...)
         local t = getTarget()
@@ -723,20 +721,30 @@ local function Toggle(value)
     getgenv().SilentAimbot = value
 end
 
-local currentBeam, a0, a1
+local currentBeam, att0, att1
+local myPart, enemyPart
+
+local function createFollowPart(parent)
+    local p = Instance.new("Part")
+    p.Anchored = true
+    p.CanCollide = false
+    p.Transparency = 1
+    p.Size = Vector3.new(0.2,0.2,0.2)
+    p.CFrame = parent.CFrame
+    p.Parent = workspace
+    return p
+end
 
 local function createBeam(startPart, endPart)
     local att0 = Instance.new("Attachment", startPart)
     local att1 = Instance.new("Attachment", endPart)
-
     local beam = Instance.new("Beam")
     beam.Attachment0 = att0
     beam.Attachment1 = att1
     beam.FaceCamera = true
-    beam.Width0 = 0.15
-    beam.Width1 = 0.15
+    beam.Width0 = 0.2
+    beam.Width1 = 0.2
     beam.LightEmission = 1
-
     beam.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
         ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255,128,0)),
@@ -745,45 +753,52 @@ local function createBeam(startPart, endPart)
         ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,128,255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,255)),
     })
-
     beam.Parent = startPart
     return beam, att0, att1
 end
 
 RunService.RenderStepped:Connect(function()
     if getgenv().SilentAimbot then
-        local target = getTarget()
-        if target and LP.Character and LP.Character:FindFirstChild("Head") then
-            local myHead = LP.Character.Head
-            local enemyHead = target
-            if not currentBeam then
-                currentBeam, a0, a1 = createBeam(myHead, enemyHead)
-            else
-                a0.WorldPosition = myHead.Position
-                a1.WorldPosition = enemyHead.Position
+        local targetHead = getTarget()
+        if targetHead and LP.Character and LP.Character:FindFirstChild("Head") then
+            if not myPart then
+                myPart = createFollowPart(LP.Character.Head)
             end
+            if not enemyPart then
+                enemyPart = createFollowPart(targetHead)
+            end
+            if not currentBeam then
+                currentBeam, att0, att1 = createBeam(myPart, enemyPart)
+            end
+            -- อัปเดตตำแหน่งทุกเฟรม
+            myPart.CFrame = LP.Character.Head.CFrame
+            enemyPart.CFrame = targetHead.CFrame
         else
             if currentBeam then
                 currentBeam:Destroy()
-                a0:Destroy()
-                a1:Destroy()
+                att0:Destroy()
+                att1:Destroy()
                 currentBeam = nil
             end
+            if myPart then myPart:Destroy(); myPart=nil end
+            if enemyPart then enemyPart:Destroy(); enemyPart=nil end
         end
     else
         if currentBeam then
             currentBeam:Destroy()
-            a0:Destroy()
-            a1:Destroy()
+            att0:Destroy()
+            att1:Destroy()
             currentBeam = nil
         end
+        if myPart then myPart:Destroy(); myPart=nil end
+        if enemyPart then enemyPart:Destroy(); enemyPart=nil end
     end
 end)
 
 AimTab:Toggle({
-    Title = "Silent Aim",
+    Title = "Silent Aim + Rainbow Beam",
     Value = false,
-    Desc = "กระสุนตามหัวคมๆ",
+    Desc = "กระสุนตามหัวคมๆ + เส้นสีรุ้งชัด",
     Callback = function(value)
         Toggle(value)
     end
