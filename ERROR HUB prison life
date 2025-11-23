@@ -717,7 +717,7 @@ local function Toggle(value)
 getgenv().SilentAimbot = value
 end
 
-AimbotTab:Toggle({
+AimTab:Toggle({
 Title = "Silent Aim",
 Value = false,
 Desc="กระสุนตามหัวคมๆ",
