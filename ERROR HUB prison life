@@ -594,64 +594,67 @@ end})
 
 local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
 
--- GLOBALS
-getgenv().SilentAimFuncLoaded = getgenv().SilentAimFuncLoaded or false
-if getgenv().SilentAimFuncLoaded then return end
-getgenv().SilentAimFuncLoaded = true
+-- CONFIG
+getgenv().SilentAimbot = false
+getgenv().SAIM_FOV = 120
+getgenv().ShowFOV = true
+getgenv().SAIM_TEAM_LIST = {
+    Neutral = false,
+    Guards = false,
+    Inmates = false,
+    Criminals = false
+}
 
+-- SERVICES
 local Players = game:GetService("Players")
 local Teams = game:GetService("Teams")
 local LP = Players.LocalPlayer
 local Cam = workspace.CurrentCamera
 local RS = game:GetService("RunService")
 
--- CONFIG
-getgenv().SilentAimbot = false
-getgenv().SAIM_FOV = 150
-getgenv().SAIM_TEAM = "All"
-getgenv().ShowFOV = true
-
--- BEAM & PARTS
-local currentBeam, att0, att1
-local myPart, enemyPart
-local FOVCircle
-
--- CREATE STATIC FOV CIRCLE
-FOVCircle = Drawing.new("Circle")
+-- DRAW FOV CIRCLE
+local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
 FOVCircle.Filled = false
 FOVCircle.Color = Color3.fromRGB(0,170,255)
-FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
+FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
 FOVCircle.Radius = getgenv().SAIM_FOV
 FOVCircle.Visible = getgenv().ShowFOV
 
+RS.RenderStepped:Connect(function()
+    FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
+    FOVCircle.Radius = getgenv().SAIM_FOV
+    FOVCircle.Visible = getgenv().ShowFOV
+end)
+
 -- TEAM CHECK
 local function isAllowedTeam(plr)
-    if getgenv().SAIM_TEAM == "All" then return true end
-    if plr.Team == Teams.Neutral and getgenv().SAIM_TEAM == "Neutral" then return true end
-    if plr.Team == Teams.Guards and getgenv().SAIM_TEAM == "Guards" then return true end
-    if plr.Team == Teams.Inmates and getgenv().SAIM_TEAM == "Inmates" then return true end
-    if plr.Team == Teams.Criminals and getgenv().SAIM_TEAM == "Criminals" then return true end
+    local activeTeams = {}
+    for t,v in pairs(getgenv().SAIM_TEAM_LIST) do
+        if v then table.insert(activeTeams,t) end
+    end
+    if #activeTeams == 0 then return true end
+    for _,t in pairs(activeTeams) do
+        if plr.Team.Name == t then return true end
+    end
     return false
 end
 
 -- GET TARGET
 local function getTarget()
     if not getgenv().SilentAimbot then return end
-    local best, dist = nil, 999999
-    local cx, cy = Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2
+    local best, dist = nil, math.huge
+    local cx,cy = Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2
     for _,v in pairs(Players:GetPlayers()) do
         if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
             if isAllowedTeam(v) then
                 local head = v.Character.Head
                 local pos, vis = Cam:WorldToViewportPoint(head.Position)
                 if vis then
-                    local dx = pos.X - cx
-                    local dy = pos.Y - cy
-                    local distance = math.sqrt(dx*dx + dy*dy)
-                    if distance <= getgenv().SAIM_FOV and distance < dist then
+                    local d = math.sqrt((pos.X-cx)^2 + (pos.Y-cy)^2)
+                    if d <= getgenv().SAIM_FOV and d < dist then
                         best = head
-                        dist = distance
+                        dist = d
                     end
                 end
             end
@@ -667,9 +670,11 @@ for _,fn in ipairs(getgc(true)) do
         for _,uv in ipairs(debug.getupvalues(fn)) do
             if typeof(uv)=="function" and debug.getinfo(uv).name=="castRay" then
                 castRay = uv
+                break
             end
         end
     end
+    if castRay then break end
 end
 
 -- HOOK castRay
@@ -684,7 +689,10 @@ if castRay then
     end)
 end
 
--- CREATE FOLLOW PART
+-- BEAM SYSTEM
+local currentBeam, att0, att1
+local myPart, enemyPart
+
 local function createFollowPart(parent)
     local p = Instance.new("Part")
     p.Anchored = true
@@ -696,10 +704,9 @@ local function createFollowPart(parent)
     return p
 end
 
--- CREATE BEAM
-local function createBeam(startPart, endPart)
-    local a0 = Instance.new("Attachment", startPart)
-    local a1 = Instance.new("Attachment", endPart)
+local function createBeam(startPart,endPart)
+    local a0 = Instance.new("Attachment",startPart)
+    local a1 = Instance.new("Attachment",endPart)
     local beam = Instance.new("Beam")
     beam.Attachment0 = a0
     beam.Attachment1 = a1
@@ -717,9 +724,6 @@ end
 
 -- RENDER LOOP
 RS.RenderStepped:Connect(function()
-    FOVCircle.Radius = getgenv().SAIM_FOV
-    FOVCircle.Visible = getgenv().ShowFOV
-
     if getgenv().SilentAimbot then
         local head = getTarget()
         if head and LP.Character and LP.Character:FindFirstChild("Head") then
@@ -743,19 +747,45 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
---== FUNCTION FOR UI BUTTONS / TOGGLES ==--
-function SilentAim_SetToggle(state)
-    getgenv().SilentAimbot = state
-end
+--== AimTab UI CONNECTIONS ==
+-- Toggle Silent Aim
+AimTab:Toggle({
+    Title = "Silent Aim",
+    Value = false,
+    Desc = "เปิด/ปิด Silent Aim",
+    Callback = function(v)
+        getgenv().SilentAimbot = v
+    end
+})
 
-function SilentAim_SetFOV(value)
-    getgenv().SAIM_FOV = value
-end
+-- Slider FOV
+AimTab:Slider({
+    Title = "FOV",
+    Min = 50,
+    Max = 500,
+    Value = 120,
+    Rounding = 0,
+    Callback = function(v)
+        getgenv().SAIM_FOV = v
+    end
+})
 
-function SilentAim_SetTeam(team)
-    getgenv().SAIM_TEAM = team
-end
+-- Toggle Show FOV
+AimTab:Toggle({
+    Title = "Show FOV",
+    Value = true,
+    Callback = function(v)
+        getgenv().ShowFOV = v
+    end
+})
 
-function SilentAim_ShowFOV(state)
-    getgenv().ShowFOV = state
+-- TEAM TOGGLES (Multi-team)
+for _,teamName in pairs({"Neutral","Guards","Inmates","Criminals"}) do
+    AimTab:Toggle({
+        Title = teamName,
+        Value = false,
+        Callback = function(v)
+            getgenv().SAIM_TEAM_LIST[teamName] = v
+        end
+    })
 end
