@@ -752,7 +752,7 @@ end)
 AimTab:Toggle({
     Title = "Silent Aim",
     Value = false,
-    Desc = "เปิด/ปิด Silent Aim",
+    Desc = "กระสุนตามหัว",
     Callback = function(v)
         getgenv().SilentAimbot = v
     end
@@ -773,14 +773,14 @@ AimTab:Slider({
 -- Toggle Show FOV
 AimTab:Toggle({
     Title = "Show FOV",
-    Value = true,
+    Value = false,
     Callback = function(v)
         getgenv().ShowFOV = v
     end
 })
 
 -- TEAM TOGGLES (Multi-team)
-for _,teamName in pairs({"Neutral","Guards","Inmates","Criminals"}) do
+for _,teamName in pairs({"ล็อคแค่Neutral","ล็อคแค่Guards","ล็อคแค่Inmates","ล็อคแค่Criminals"}) do
     AimTab:Toggle({
         Title = teamName,
         Value = false,
