@@ -787,7 +787,7 @@ for teamKey, titleName in pairs({
     Criminals = "ล็อคแค่ทีม Criminals"
 }) do
     AimTab:Toggle({
-        Title = .,
+        Title = titleName,
         Value = false,
         Callback = function(v)
             getgenv().SAIM_TEAM_LIST[teamKey] = v
