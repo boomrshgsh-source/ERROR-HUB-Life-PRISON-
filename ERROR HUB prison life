@@ -597,7 +597,7 @@ local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
 -- CONFIG
 getgenv().SilentAimbot = false
 getgenv().SAIM_FOV = 120
-getgenv().ShowFOV = true
+getgenv().ShowFOV = false -- ปิดวง FOV เริ่มต้น
 getgenv().SAIM_TEAM_LIST = {
     Neutral = false,
     Guards = false,
@@ -627,18 +627,15 @@ RS.RenderStepped:Connect(function()
     FOVCircle.Visible = getgenv().ShowFOV
 end)
 
--- TEAM CHECK (แก้ไขแล้ว)
+-- TEAM CHECK
 local function isAllowedTeam(plr)
-    local activeTeams = {}
     for teamName, enabled in pairs(getgenv().SAIM_TEAM_LIST) do
         if enabled then
             local t = Teams:FindFirstChild(teamName)
-            if t then table.insert(activeTeams, t) end
+            if t and plr.Team == t then
+                return true
+            end
         end
-    end
-    if #activeTeams == 0 then return true end
-    for _,t in pairs(activeTeams) do
-        if plr.Team == t then return true end
     end
     return false
 end
@@ -776,19 +773,24 @@ AimTab:Slider({
 -- Toggle Show FOV
 AimTab:Toggle({
     Title = "Show FOV",
-    Value = false,
+    Value = false, -- เริ่มต้นปิด
     Callback = function(v)
         getgenv().ShowFOV = v
     end
 })
 
 -- TEAM TOGGLES (Multi-team)
-for _,teamName in pairs({"ล็อคแค่ทีมNeutral","ล็อคแค่ทีมGuards","ล็อคแค่ทีมInmates","ล็อคแค่ทีมCriminals"}) do
+for teamKey, titleName in pairs({
+    Neutral = "ล็อคแค่ทีม Neutral",
+    Guards = "ล็อคแค่ทีม Guards",
+    Inmates = "ล็อคแค่ทีม Inmates",
+    Criminals = "ล็อคแค่ทีม Criminals"
+}) do
     AimTab:Toggle({
-        Title = teamName,
+        Title = .,
         Value = false,
         Callback = function(v)
-            getgenv().SAIM_TEAM_LIST[teamName] = v
+            getgenv().SAIM_TEAM_LIST[teamKey] = v
         end
     })
 end
