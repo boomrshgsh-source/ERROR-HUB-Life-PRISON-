@@ -627,15 +627,18 @@ RS.RenderStepped:Connect(function()
     FOVCircle.Visible = getgenv().ShowFOV
 end)
 
--- TEAM CHECK
+-- TEAM CHECK (แก้ไขแล้ว)
 local function isAllowedTeam(plr)
     local activeTeams = {}
-    for t,v in pairs(getgenv().SAIM_TEAM_LIST) do
-        if v then table.insert(activeTeams,t) end
+    for teamName, enabled in pairs(getgenv().SAIM_TEAM_LIST) do
+        if enabled then
+            local t = Teams:FindFirstChild(teamName)
+            if t then table.insert(activeTeams, t) end
+        end
     end
     if #activeTeams == 0 then return true end
     for _,t in pairs(activeTeams) do
-        if plr.Team.Name == t then return true end
+        if plr.Team == t then return true end
     end
     return false
 end
@@ -773,14 +776,14 @@ AimTab:Slider({
 -- Toggle Show FOV
 AimTab:Toggle({
     Title = "Show FOV",
-    Value = false,
+    Value = true,
     Callback = function(v)
         getgenv().ShowFOV = v
     end
 })
 
 -- TEAM TOGGLES (Multi-team)
-for _,teamName in pairs({"ล็อคแค่Neutral","ล็อคแค่Guards","ล็อคแค่Inmates","ล็อคแค่Criminals"}) do
+for _,teamName in pairs({"ล็อคแค่ทีมNeutral","ล็อคแค่ทีมGuards","ล็อคแค่ทีมInmates","ล็อคแค่ทีมCriminals"}) do
     AimTab:Toggle({
         Title = teamName,
         Value = false,
