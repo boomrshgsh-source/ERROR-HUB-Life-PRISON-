@@ -670,58 +670,132 @@ end})
 
 local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
 
+--== GLOBAL CONFIG ==--
 getgenv().SilentAimbot = false
+getgenv().LockGuardsOnly = false
+getgenv().LockInmatesOnly = false
+getgenv().LockCriminalsOnly = false
+getgenv().LockNeutralOnly = false
+getgenv().FOV = 150   -- ค่าเริ่มต้น
+getgenv().ShowFOV = true
+
+--== SERVICES ==--
 local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
 local LP = Players.LocalPlayer
 local cam = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
-print("Silent Aimbot By DayToDay2044 addr=",castRay)
-local function getTarget()
-    if not getgenv().SilentAimbot then return end
-    local best, dist = nil, 1e9
-    local cx, cy = cam.ViewportSize.X/2, cam.ViewportSize.Y/2
-    for _,v in ipairs(Players:GetPlayers()) do
-        local c = v.Character
-        if v ~= LP and v.Team ~= LP.Team and c then
-            local h = c:FindFirstChild("Head")
-            if h then
-                local p,vis = cam:WorldToViewportPoint(h.Position)
-                if vis then
-                    local d = (p.X-cx)^2 + (p.Y-cy)^2
-                    if d < dist then best, dist = h, d end
-                end
-            end
-        end
-    end
-    return best
-end
+local UIS = game:GetService("UserInputService")
 
+--========================
+-- CREATE FOV CIRCLE
+--========================
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.Radius = getgenv().FOV
+fovCircle.Filled = false
+fovCircle.Color = Color3.fromRGB(0,255,100)
+fovCircle.Visible = getgenv().ShowFOV
+
+RunService.RenderStepped:Connect(function()
+    fovCircle.Position = UIS:GetMouseLocation()
+    fovCircle.Radius = getgenv().FOV
+    fovCircle.Visible = getgenv().ShowFOV
+end)
+
+--========================
+-- FIND CASTRAY
+--========================
 local castRay
 for _,fn in ipairs(getgc(true)) do
     if typeof(fn)=="function" then
         for _,uv in ipairs(debug.getupvalues(fn)) do
             if typeof(uv)=="function" and debug.getinfo(uv).name=="castRay" then
-                castRay = uv; break
+                castRay = uv
+                break
             end
         end
     end
     if castRay then break end
 end
 
-if castRay then
-    local old; old = hookfunction(castRay, function(a,b,...)
-        local t = getTarget()
-        if t then
-            return t, t.Position
+--========================
+-- TARGET FINDER + FOV
+--========================
+local function getTarget()
+    if not getgenv().SilentAimbot then return end
+
+    local best, dist = nil, 999999
+    local mousePos = UIS:GetMouseLocation()
+
+    for _,plr in ipairs(Players:GetPlayers()) do
+        local char = plr.Character
+        if plr ~= LP and char then
+
+            -- TEAM FILTERS ---------------------------
+            if getgenv().LockGuardsOnly then
+                if plr.Team ~= Teams.Guards then continue end
+            end
+            if getgenv().LockInmatesOnly then
+                if plr.Team ~= Teams.Inmates then continue end
+            end
+            if getgenv().LockCriminalsOnly then
+                if plr.Team ~= Teams.Criminals then continue end
+            end
+            if getgenv().LockNeutralOnly then
+                if plr.Team ~= Teams.Neutral then continue end
+            end
+
+            -- ถ้าไม่ได้เปิด Lock ทีม → ไม่ยิงทีมเดียวกัน
+            if not (
+                getgenv().LockGuardsOnly or
+                getgenv().LockInmatesOnly or
+                getgenv().LockCriminalsOnly or
+                getgenv().LockNeutralOnly
+            ) then
+                if plr.Team == LP.Team then continue end
+            end
+
+            ------------------------------------------
+
+            local head = char:FindFirstChild("Head")
+            if head then
+                local screenPos, visible = cam:WorldToViewportPoint(head.Position)
+                if visible then
+                    
+                    -- เช็คว่าอยู่ใน FOV หรือไม่
+                    local dx = screenPos.X - mousePos.X
+                    local dy = screenPos.Y - mousePos.Y
+                    local distance = math.sqrt(dx*dx + dy*dy)
+
+                    if distance < getgenv().FOV then
+                        if distance < dist then
+                            best, dist = head, distance
+                        end
+                    end
+                end
+            end
         end
+    end
+
+    return best
+end
+
+--========================
+-- HOOK CASTRAY
+--========================
+if castRay then
+    local old
+    old = hookfunction(castRay, function(a,b,...)
+        local t = getTarget()
+        if t then return t, t.Position end
         return old(a,b,...)
     end)
 end
 
-local function Toggle(value)
-    getgenv().SilentAimbot = value
-end
-
+--========================
+-- BEAM VISUALIZER
+--========================
 local currentBeam, att0, att1
 local myPart, enemyPart
 
@@ -736,12 +810,12 @@ local function createFollowPart(parent)
     return p
 end
 
-local function createBeam(startPart, endPart)
-    local att0 = Instance.new("Attachment", startPart)
-    local att1 = Instance.new("Attachment", endPart)
+local function createBeam(a, b)
+    local at0 = Instance.new("Attachment", a)
+    local at1 = Instance.new("Attachment", b)
     local beam = Instance.new("Beam")
-    beam.Attachment0 = att0
-    beam.Attachment1 = att1
+    beam.Attachment0 = at0
+    beam.Attachment1 = at1
     beam.FaceCamera = true
     beam.Width0 = 0.2
     beam.Width1 = 0.2
@@ -754,54 +828,80 @@ local function createBeam(startPart, endPart)
         ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0,128,255)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,255)),
     })
-    beam.Parent = startPart
-    return beam, att0, att1
+    beam.Parent = a
+    return beam, at0, at1
 end
 
 RunService.RenderStepped:Connect(function()
     if getgenv().SilentAimbot then
-        local targetHead = getTarget()
-        if targetHead and LP.Character and LP.Character:FindFirstChild("Head") then
-            if not myPart then
-                myPart = createFollowPart(LP.Character.Head)
-            end
-            if not enemyPart then
-                enemyPart = createFollowPart(targetHead)
-            end
-            if not currentBeam then
-                currentBeam, att0, att1 = createBeam(myPart, enemyPart)
-            end
-            
+        local t = getTarget()
+        if t and LP.Character and LP.Character:FindFirstChild("Head") then
+
+            if not myPart then myPart = createFollowPart(LP.Character.Head) end
+            if not enemyPart then enemyPart = createFollowPart(t) end
+            if not currentBeam then currentBeam, att0, att1 = createBeam(myPart, enemyPart) end
+
             myPart.CFrame = LP.Character.Head.CFrame
-            enemyPart.CFrame = targetHead.CFrame
+            enemyPart.CFrame = t.CFrame
+
         else
-            if currentBeam then
-                currentBeam:Destroy()
-                att0:Destroy()
-                att1:Destroy()
-                currentBeam = nil
-            end
-            if myPart then myPart:Destroy(); myPart=nil end
-            if enemyPart then enemyPart:Destroy(); enemyPart=nil end
+            if currentBeam then currentBeam:Destroy() end
+            if att0 then att0:Destroy() end
+            if att1 then att1:Destroy() end
+            currentBeam, att0, att1, myPart, enemyPart = nil,nil,nil,nil,nil
         end
-    else
-        if currentBeam then
-            currentBeam:Destroy()
-            att0:Destroy()
-            att1:Destroy()
-            currentBeam = nil
-        end
-        if myPart then myPart:Destroy(); myPart=nil end
-        if enemyPart then enemyPart:Destroy(); enemyPart=nil end
     end
 end)
 
+--========================
+-- UI
+--========================
 AimTab:Toggle({
     Title = "Silent Aim",
     Value = false,
     Desc = "กระสุนตามหัวคมๆ",
-    Callback = function(value)
-        Toggle(value)
+    Callback = function(v) getgenv().SilentAimbot = v end
+})
+
+AimTab:Toggle({
+    Title = "Lock Guards Only",
+    Value = false,
+    Callback = function(v) getgenv().LockGuardsOnly = v end
+})
+
+AimTab:Toggle({
+    Title = "Lock Inmates Only",
+    Value = false,
+    Callback = function(v) getgenv().LockInmatesOnly = v end
+})
+
+AimTab:Toggle({
+    Title = "Lock Criminals Only",
+    Value = false,
+    Callback = function(v) getgenv().LockCriminalsOnly = v end
+})
+
+AimTab:Toggle({
+    Title = "Lock Neutral Only",
+    Value = false,
+    Callback = function(v) getgenv().LockNeutralOnly = v end
+})
+
+AimTab:Slider({
+    Title = "FOV",
+    Min = 20,
+    Max = 400,
+    Default = 150,
+    Callback = function(v)
+        getgenv().FOV = v
+    end
+})
+
+AimTab:Toggle({
+    Title = "Show FOV Circle",
+    Value = true,
+    Callback = function(v)
+        getgenv().ShowFOV = v
     end
 })
 
