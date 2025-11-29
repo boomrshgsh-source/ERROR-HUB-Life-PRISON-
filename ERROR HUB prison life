@@ -616,13 +616,12 @@ local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
 FOVCircle.Filled = false
 FOVCircle.Color = Color3.fromRGB(0,170,255)
-FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
 FOVCircle.Radius = getgenv().SAIM_FOV
-FOVCircle.Visible = true
 
 RS.RenderStepped:Connect(function()
-    FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
+    FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
     FOVCircle.Radius = getgenv().SAIM_FOV
+    FOVCircle.Visible = getgenv().SilentAimbot -- แสดงเฉพาะตอนเปิด Silent Aim
 end)
 
 -- TEAM CHECK
@@ -753,6 +752,7 @@ end)
 -- Toggle Silent Aim
 AimTab:Toggle({
     Title = "Silent Aim",
+    Desc = "กระสุนตามหัว",
     Value = false,
     Callback = function(v)
         getgenv().SilentAimbot = v
@@ -785,7 +785,7 @@ AimTab:Toggle({
     Value = false,
     Callback = function(v)
         for teamKey,_ in pairs(teams) do
-            if Teams:FindFirstChild(teamKey) ~= LP.Team then -- ไม่รวมทีมตัวเอง
+            if Teams:FindFirstChild(teamKey) ~= LP.Team then
                 getgenv().SAIM_TEAM_LIST[teamKey] = v
             end
         end
@@ -798,7 +798,7 @@ for teamKey, titleName in pairs(teams) do
         Title = titleName,
         Value = false,
         Callback = function(v)
-            if Teams:FindFirstChild(teamKey) ~= LP.Team then -- ไม่ล็อคทีมตัวเอง
+            if Teams:FindFirstChild(teamKey) ~= LP.Team then
                 getgenv().SAIM_TEAM_LIST[teamKey] = v
             end
         end
