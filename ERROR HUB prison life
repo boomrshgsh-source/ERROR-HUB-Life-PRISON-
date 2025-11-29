@@ -597,7 +597,6 @@ local AimTab = Window:Tab({Title="Aimbot", Icon="target"})
 -- CONFIG
 getgenv().SilentAimbot = false
 getgenv().SAIM_FOV = 120
-getgenv().ShowFOV = false -- ปิดวง FOV เริ่มต้น
 getgenv().SAIM_TEAM_LIST = {
     Neutral = false,
     Guards = false,
@@ -619,16 +618,18 @@ FOVCircle.Filled = false
 FOVCircle.Color = Color3.fromRGB(0,170,255)
 FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
 FOVCircle.Radius = getgenv().SAIM_FOV
-FOVCircle.Visible = getgenv().ShowFOV
+FOVCircle.Visible = true
 
 RS.RenderStepped:Connect(function()
     FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
     FOVCircle.Radius = getgenv().SAIM_FOV
-    FOVCircle.Visible = getgenv().ShowFOV
 end)
 
 -- TEAM CHECK
 local function isAllowedTeam(plr)
+    if plr == LP then return false end          -- ไม่ล็อคตัวเอง
+    if plr.Team == LP.Team then return false end -- ไม่ล็อคทีมตัวเอง
+
     for teamName, enabled in pairs(getgenv().SAIM_TEAM_LIST) do
         if enabled then
             local t = Teams:FindFirstChild(teamName)
@@ -646,7 +647,7 @@ local function getTarget()
     local best, dist = nil, math.huge
     local cx,cy = Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2
     for _,v in pairs(Players:GetPlayers()) do
-        if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
+        if v.Character and v.Character:FindFirstChild("Head") then
             if isAllowedTeam(v) then
                 local head = v.Character.Head
                 local pos, vis = Cam:WorldToViewportPoint(head.Position)
@@ -747,12 +748,12 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
---== AimTab UI CONNECTIONS ==
+--== AimTab UI CONNECTIONS ==--
+
 -- Toggle Silent Aim
 AimTab:Toggle({
     Title = "Silent Aim",
     Value = false,
-    Desc = "กระสุนตามหัว",
     Callback = function(v)
         getgenv().SilentAimbot = v
     end
@@ -770,27 +771,36 @@ AimTab:Slider({
     end
 })
 
--- Toggle Show FOV
-AimTab:Toggle({
-    Title = "Show FOV",
-    Value = false, -- เริ่มต้นปิด
-    Callback = function(v)
-        getgenv().ShowFOV = v
-    end
-})
-
--- TEAM TOGGLES (Multi-team)
-for teamKey, titleName in pairs({
+-- TEAM TOGGLES
+local teams = {
     Neutral = "ล็อคแค่ทีม Neutral",
     Guards = "ล็อคแค่ทีม Guards",
     Inmates = "ล็อคแค่ทีม Inmates",
     Criminals = "ล็อคแค่ทีม Criminals"
-}) do
+}
+
+-- ปุ่มล็อคทุกทีม (ไม่รวมทีมตัวเอง)
+AimTab:Toggle({
+    Title = "ล็อคทุกทีม",
+    Value = false,
+    Callback = function(v)
+        for teamKey,_ in pairs(teams) do
+            if Teams:FindFirstChild(teamKey) ~= LP.Team then -- ไม่รวมทีมตัวเอง
+                getgenv().SAIM_TEAM_LIST[teamKey] = v
+            end
+        end
+    end
+})
+
+-- ปุ่มล็อคแต่ละทีม
+for teamKey, titleName in pairs(teams) do
     AimTab:Toggle({
         Title = titleName,
         Value = false,
         Callback = function(v)
-            getgenv().SAIM_TEAM_LIST[teamKey] = v
+            if Teams:FindFirstChild(teamKey) ~= LP.Team then -- ไม่ล็อคทีมตัวเอง
+                getgenv().SAIM_TEAM_LIST[teamKey] = v
+            end
         end
     })
 end
