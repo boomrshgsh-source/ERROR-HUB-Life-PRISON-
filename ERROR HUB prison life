@@ -776,7 +776,7 @@ AimTab:Slider({
 -- Toggle Show FOV
 AimTab:Toggle({
     Title = "Show FOV",
-    Value = true,
+    Value = false,
     Callback = function(v)
         getgenv().ShowFOV = v
     end
