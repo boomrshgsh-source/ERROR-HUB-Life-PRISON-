@@ -737,7 +737,7 @@ local function stopArrestAura()
 end
 
 MainTab:Toggle({
-    Title = "จับโจรทุกคน (วาป+Tweenติดหลังชิด)",
+    Title = "จับโจรทุกคน",
     Desc = "ต้องเป็นตำรวจ",
     Value = false,
     Callback = function(v)
