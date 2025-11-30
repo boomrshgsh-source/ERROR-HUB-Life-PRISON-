@@ -574,6 +574,117 @@ MainTab:Toggle({
         arrestAuraEnabled = v
     end
 })
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Teams = game:GetService("Teams")
+local UserInputService = game:GetService("UserInputService")
+
+local plr = Players.LocalPlayer
+local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
+local Criminals = Teams:FindFirstChild("Criminals")
+
+local AURA_DISTANCE = 20
+local arrestAuraEnabled = false
+local startPositionCFrame = nil
+
+-- วาปไปด้านหลังเป้าหมาย
+local function teleportBehind(target)
+    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+    if not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local targetHRP = target.Character.HumanoidRootPart
+    local plrHRP = plr.Character.HumanoidRootPart
+
+    local lookVector = targetHRP.CFrame.LookVector
+    local behindPosition = targetHRP.Position - (lookVector * 5)
+    plrHRP.CFrame = CFrame.new(behindPosition, targetHRP.Position)
+end
+
+-- วาปกลับตำแหน่งเริ่มต้น
+local function teleportToStart()
+    if startPositionCFrame and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        plr.Character.HumanoidRootPart.CFrame = startPositionCFrame
+    end
+end
+
+-- ดึงรายชื่อโจรในระยะ
+local function getCriminalsInRange()
+    local targets = {}
+    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return targets end
+    local rootPos = plr.Character.HumanoidRootPart.Position
+
+    for _, other in pairs(Players:GetPlayers()) do
+        if other ~= plr and other.Team == Criminals and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (rootPos - other.Character.HumanoidRootPart.Position).Magnitude
+            if dist <= AURA_DISTANCE then
+                table.insert(targets, other)
+            end
+        end
+    end
+    return targets
+end
+
+-- จับโจรทั้งหมดในระยะทีละคน
+local function arrestAllInRange()
+    local targets = getCriminalsInRange()
+    if #targets == 0 then
+        return false
+    end
+
+    for _, target in ipairs(targets) do
+        teleportBehind(target)
+        wait(0.05)
+        arrestRemote:InvokeServer(target)
+        wait(0.3)
+    end
+    return true
+end
+
+local arrestAuraCoroutine
+
+local function startArrestAura()
+    if arrestAuraEnabled then return end
+    arrestAuraEnabled = true
+
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        startPositionCFrame = plr.Character.HumanoidRootPart.CFrame
+    end
+
+    arrestAuraCoroutine = coroutine.create(function()
+        while arrestAuraEnabled do
+            local arrestedAnyone = arrestAllInRange()
+            if not arrestedAnyone then
+                teleportToStart()
+                wait(1)
+            else
+                wait(0.1)
+            end
+        end
+    end)
+
+    coroutine.resume(arrestAuraCoroutine)
+end
+
+local function stopArrestAura()
+    if not arrestAuraEnabled then return end
+    arrestAuraEnabled = false
+    teleportToStart()
+end
+
+MainTab:Toggle({
+    Title = "จับโจรทุกคน",
+    Desc = "ต้องเป็นตำรวจ",
+    Value = false,
+    Callback = function(v)
+        if v then
+            startArrestAura()
+        else
+            stopArrestAura()
+        end
+    end
+})
+
 local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
 TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
 TPTab:Button({Title="ไปฐานโจร", Callback=function() TPToPosition(Vector3.new(-936.99,94.13,2053.28)) end})
