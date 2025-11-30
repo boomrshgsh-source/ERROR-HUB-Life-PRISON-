@@ -578,12 +578,13 @@ MainTab:Toggle({
 local Players = game:GetService("Players")
 local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local plr = Players.LocalPlayer
 local Criminals = Teams:FindFirstChild("Criminals")
 local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
 
-local AURA_DISTANCE = 10000 -- ระยะตรวจจับกว้างมาก
+local AURA_DISTANCE = 10000
 local startPositionCFrame = nil
 local arrestAuraEnabled = false
 
@@ -603,8 +604,25 @@ local function teleportBehind(target)
     local targetHRP = waitForHRP(targetChar)
 
     local lookVector = targetHRP.CFrame.LookVector
-    local behindPos = targetHRP.Position - (lookVector * 1) + Vector3.new(0, 2, 0) -- วาปติดหลัง target
+    local behindPos = targetHRP.Position - (lookVector * 0.1) + Vector3.new(0, 2, 0)
     plrHRP.CFrame = CFrame.new(behindPos, targetHRP.Position)
+end
+
+local function tweenFollowTarget(target, duration)
+    local plrChar = plr.Character
+    if not plrChar then return end
+    local plrHRP = plrChar:FindFirstChild("HumanoidRootPart")
+    local targetHRP = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+    if not plrHRP or not targetHRP then return end
+
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local lookVector = targetHRP.CFrame.LookVector
+    local behindPos = targetHRP.Position - (lookVector * 0.1) + Vector3.new(0, 2, 0)
+    local tweenGoal = {CFrame = CFrame.new(behindPos, targetHRP.Position)}
+
+    local tween = TweenService:Create(plrHRP, tweenInfo, tweenGoal)
+    tween:Play()
+    tween.Completed:Wait()
 end
 
 local function teleportToStart()
@@ -629,23 +647,59 @@ local function getCriminalsInRange()
     return targets
 end
 
+local function arrestPlayer(target)
+    arrestRemote:InvokeServer(target)
+end
+
 local function arrestRepeatedly(target, times, delay)
     for i = 1, times do
-        arrestRemote:InvokeServer(target)
+        arrestPlayer(target)
         wait(delay)
     end
 end
 
-local function arrestAllInRange()
-    local targets = getCriminalsInRange()
-    if #targets == 0 then return false end
+local trackedTargets = {}
 
-    for _, target in ipairs(targets) do
-        teleportBehind(target)
-        wait(0.05) -- รอวาปติดหลัง
-        arrestRepeatedly(target, 10, 0.01) -- จับรัว 10 รอบ ความเร็ว 0.01 วิ
-        wait(3) -- รอ 3 วิ ก่อนเปลี่ยนเป้า
+local function arrestAllInRange()
+    local currentTargets = getCriminalsInRange()
+    local validTargets = {}
+
+    -- รวมชื่อเป้าหมายเก่า + ใหม่ ที่ยังอยู่ในระยะ
+    for _, target in ipairs(currentTargets) do
+        if trackedTargets[target.Name] then
+            table.insert(validTargets, target)
+        else
+            trackedTargets[target.Name] = true
+            table.insert(validTargets, target)
+        end
     end
+
+    -- ลบชื่อที่ไม่อยู่ในระยะออกจาก trackedTargets
+    for name in pairs(trackedTargets) do
+        local found = false
+        for _, t in ipairs(currentTargets) do
+            if t.Name == name then
+                found = true
+                break
+            end
+        end
+        if not found then
+            trackedTargets[name] = nil
+        end
+    end
+
+    if #validTargets == 0 then return false end
+
+    for _, target in ipairs(validTargets) do
+        if target.Name and trackedTargets[target.Name] then
+            teleportBehind(target)
+            wait(0.1)
+            tweenFollowTarget(target, 3)
+            arrestRepeatedly(target, 10, 0.01)
+            wait(3)
+        end
+    end
+
     return true
 end
 
@@ -654,6 +708,7 @@ local arrestAuraCoroutine
 local function startArrestAura()
     if arrestAuraEnabled then return end
     arrestAuraEnabled = true
+    trackedTargets = {}
 
     if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
         startPositionCFrame = plr.Character.HumanoidRootPart.CFrame
@@ -677,11 +732,12 @@ end
 local function stopArrestAura()
     if not arrestAuraEnabled then return end
     arrestAuraEnabled = false
+    trackedTargets = {}
     teleportToStart()
 end
 
 MainTab:Toggle({
-    Title = "จับโจรทุกคน",
+    Title = "จับโจรทุกคน (วาป+Tweenติดหลังชิด)",
     Desc = "ต้องเป็นตำรวจ",
     Value = false,
     Callback = function(v)
@@ -692,6 +748,7 @@ MainTab:Toggle({
         end
     end
 })
+
 
 local TPTab = Window:Tab({Title="TP", Icon="map-pin"})
 TPTab:Button({Title="ไปต้นไม้หน้าคุก", Callback=function() TPToPosition(Vector3.new(473.02,109.78,2395.03)) end})
