@@ -576,39 +576,43 @@ MainTab:Toggle({
 })
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Teams = game:GetService("Teams")
-local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local plr = Players.LocalPlayer
-local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
 local Criminals = Teams:FindFirstChild("Criminals")
+local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
 
-local AURA_DISTANCE = 20
-local arrestAuraEnabled = false
+local AURA_DISTANCE = 10000 -- ระยะตรวจจับ 10000 หน่วย
 local startPositionCFrame = nil
+local arrestAuraEnabled = false
 
--- วาปไปด้านหลังเป้าหมาย
-local function teleportBehind(target)
-    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
-    if not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
-
-    local targetHRP = target.Character.HumanoidRootPart
-    local plrHRP = plr.Character.HumanoidRootPart
-
-    local lookVector = targetHRP.CFrame.LookVector
-    local behindPosition = targetHRP.Position - (lookVector * 5)
-    plrHRP.CFrame = CFrame.new(behindPosition, targetHRP.Position)
+local function waitForHRP(character)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    while not hrp do
+        hrp = character:FindFirstChild("HumanoidRootPart")
+        wait(0.1)
+    end
+    return hrp
 end
 
--- วาปกลับตำแหน่งเริ่มต้น
+local function teleportBehind(target)
+    local plrChar = plr.Character or plr.CharacterAdded:Wait()
+    local targetChar = target.Character or target.CharacterAdded:Wait()
+    local plrHRP = waitForHRP(plrChar)
+    local targetHRP = waitForHRP(targetChar)
+
+    local lookVector = targetHRP.CFrame.LookVector
+    local behindPos = targetHRP.Position - (lookVector * 5) + Vector3.new(0, 2, 0)
+    plrHRP.CFrame = CFrame.new(behindPos, targetHRP.Position)
+end
+
 local function teleportToStart()
     if startPositionCFrame and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
         plr.Character.HumanoidRootPart.CFrame = startPositionCFrame
     end
 end
 
--- ดึงรายชื่อโจรในระยะ
 local function getCriminalsInRange()
     local targets = {}
     if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return targets end
@@ -625,16 +629,13 @@ local function getCriminalsInRange()
     return targets
 end
 
--- จับโจรทั้งหมดในระยะทีละคน
 local function arrestAllInRange()
     local targets = getCriminalsInRange()
-    if #targets == 0 then
-        return false
-    end
+    if #targets == 0 then return false end
 
     for _, target in ipairs(targets) do
         teleportBehind(target)
-        wait(0.05)
+        wait(0.1)
         arrestRemote:InvokeServer(target)
         wait(0.3)
     end
@@ -672,6 +673,7 @@ local function stopArrestAura()
     teleportToStart()
 end
 
+-- ตัวอย่าง Toggle UI (สมมติ MainTab คือ UI Tab ที่มีฟังก์ชัน Toggle)
 MainTab:Toggle({
     Title = "จับโจรทุกคน",
     Desc = "ต้องเป็นตำรวจ",
