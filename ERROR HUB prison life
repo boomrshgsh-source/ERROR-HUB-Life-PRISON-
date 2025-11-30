@@ -583,7 +583,7 @@ local plr = Players.LocalPlayer
 local Criminals = Teams:FindFirstChild("Criminals")
 local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
 
-local AURA_DISTANCE = 10000 -- ระยะตรวจจับ 10000 หน่วย
+local AURA_DISTANCE = 10000 -- ระยะตรวจจับกว้างมาก
 local startPositionCFrame = nil
 local arrestAuraEnabled = false
 
@@ -603,7 +603,7 @@ local function teleportBehind(target)
     local targetHRP = waitForHRP(targetChar)
 
     local lookVector = targetHRP.CFrame.LookVector
-    local behindPos = targetHRP.Position - (lookVector * 5) + Vector3.new(0, 2, 0)
+    local behindPos = targetHRP.Position - (lookVector * 1) + Vector3.new(0, 2, 0) -- วาปติดหลัง target
     plrHRP.CFrame = CFrame.new(behindPos, targetHRP.Position)
 end
 
@@ -629,15 +629,22 @@ local function getCriminalsInRange()
     return targets
 end
 
+local function arrestRepeatedly(target, times, delay)
+    for i = 1, times do
+        arrestRemote:InvokeServer(target)
+        wait(delay)
+    end
+end
+
 local function arrestAllInRange()
     local targets = getCriminalsInRange()
     if #targets == 0 then return false end
 
     for _, target in ipairs(targets) do
         teleportBehind(target)
-        wait(0.1)
-        arrestRemote:InvokeServer(target)
-        wait(0.3)
+        wait(0.05) -- รอวาปติดหลัง
+        arrestRepeatedly(target, 10, 0.01) -- จับรัว 10 รอบ ความเร็ว 0.01 วิ
+        wait(3) -- รอ 3 วิ ก่อนเปลี่ยนเป้า
     end
     return true
 end
@@ -673,7 +680,6 @@ local function stopArrestAura()
     teleportToStart()
 end
 
--- ตัวอย่าง Toggle UI (สมมติ MainTab คือ UI Tab ที่มีฟังก์ชัน Toggle)
 MainTab:Toggle({
     Title = "จับโจรทุกคน",
     Desc = "ต้องเป็นตำรวจ",
