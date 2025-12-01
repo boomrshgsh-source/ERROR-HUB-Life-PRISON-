@@ -1,0 +1,44 @@
+getgenv().SilentAimbot = true -- เปิด/ปิด true/fasle 
+
+local LP = game.Players.LocalPlayer
+local cam = workspace.CurrentCamera
+local function getTarget()
+    if not getgenv().SilentAimbot then return end
+    local best, dist = nil, 1e9
+    local cx, cy = cam.ViewportSize.X/2, cam.ViewportSize.Y/2
+    for _,v in ipairs(game.Players:GetPlayers()) do
+        local c = v.Character
+        if v ~= LP and v.Team ~= LP.Team and c then
+            local h = c:FindFirstChild("Head")
+            if h then
+                local p,vis = cam:WorldToViewportPoint(h.Position)
+                if vis then
+                    local d = (p.X-cx)^2 + (p.Y-cy)^2
+                    if d < dist then best, dist = h, d end
+                end
+            end
+        end
+    end
+    return best
+end
+local castRay
+for _,fn in ipairs(getgc(true)) do
+    if typeof(fn)=="function" then
+        for _,uv in ipairs(debug.getupvalues(fn)) do
+            if typeof(uv)=="function" and debug.getinfo(uv).name=="castRay" then
+                castRay = uv; break
+            end
+        end
+    end
+    if castRay then break end
+end
+print("Silent Aimbot By DayToDay2044 addr=",castRay)
+if castRay then
+    local old; old = hookfunction(castRay, function(a,b,...)
+        local t = getTarget()
+        if t then
+            return t, t.Position
+        end
+        return old(a,b,...)
+    end)
+end
