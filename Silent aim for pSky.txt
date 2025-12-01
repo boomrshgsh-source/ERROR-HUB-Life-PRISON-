@@ -32,7 +32,7 @@ for _,fn in ipairs(getgc(true)) do
     end
     if castRay then break end
 end
-print("Silent Aimbot By DayToDay2044 addr=",castRay)
+print("Sky is gay :D ")
 if castRay then
     local old; old = hookfunction(castRay, function(a,b,...)
         local t = getTarget()
@@ -42,3 +42,4 @@ if castRay then
         return old(a,b,...)
     end)
 end
+
