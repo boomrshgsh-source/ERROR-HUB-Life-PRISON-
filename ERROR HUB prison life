@@ -1,103 +1,5 @@
-local WEBHOOK_URL = "https://canary.discord.com/api/webhooks/1440700806495080511/GX8AAGu3VXobKS3I_tRMStwY027E4d6rJoNNKKX4tK7ozjIW7wyGVAdKU1l1zAW-FtY4"
 
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local Marketplace = game:GetService("MarketplaceService")
-local UserInputService = game:GetService("UserInputService")
-
-local plr = Players.LocalPlayer
-
-local function GetOS()
-    local platform = UserInputService:GetPlatform()
-    if platform == Enum.Platform.Windows then
-        return "Windows 💻"
-    elseif platform == Enum.Platform.IOS then
-        return "iOS 🍎"
-    elseif platform == Enum.Platform.Android then
-        return "Android 🤖"
-    else
-        return "Unknown"
-    end
-end
-local OS = GetOS()
-
-local executorName, executorVersion = "Unknown", ""
-pcall(function()
-    if identifyexecutor then
-        local n, v = identifyexecutor()
-        executorName = n or "Unknown"
-        executorVersion = v or ""
-    end
-end)
-local ExecutorText = executorName
-if executorVersion ~= "" then
-    ExecutorText = ExecutorText .. " | " .. executorVersion
-end
-
-local avatarApi = "https://thumbnails.roblox.com/v1/users/avatar?userIds=" ..
-    plr.UserId .. "&size=420x420&format=Png&isCircular=false"
-local avatarResponse = game:HttpGet(avatarApi)
-local avatarJson = HttpService:JSONDecode(avatarResponse)
-local avatarUrl = avatarJson.data[1].imageUrl or ""
-
-local mapApi = "https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" ..
-    game.PlaceId .. "&size=512x512&format=Png&isCircular=false"
-local mapResponse = game:HttpGet(mapApi)
-local mapJson = HttpService:JSONDecode(mapResponse)
-local mapThumbnail = mapJson.data[1].imageUrl or ""
-
-local placeId = game.PlaceId
-local placeName = Marketplace:GetProductInfo(placeId).Name
-
-local placeLink = "https://www.roblox.com/games/"..placeId
-
-local function GetThaiTimestamp()
-    local time = os.date("!*t")
-    time.hour = (time.hour + 7) % 24
-    return string.format("%02d-%02d-%02d %02d:%02d:%02d", time.day, time.month, time.year, time.hour, time.min, time.sec)
-end
-local timestamp = GetThaiTimestamp()
-
-local color = 0
-if OS == "Windows 💻" then
-    color = 3447003
-elseif OS == "Android 🤖" then
-    color = 3066993
-elseif OS == "iOS 🍎" then
-    color = 15158332
-else
-    color = 0
-end
-
-local data = {
-    username = "ERROR HUB",
-    embeds = {{
-        title = "🌌ERROR HUB(prison life)ถูกใช้งาน",
-        color = color,
-        thumbnail = { url = avatarUrl },
-        image = { url = mapThumbnail },
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-        fields = {
-            { name = "🌠 คนใช้", value = plr.Name, inline = true },
-            { name = "📱 อุปกรณ์ที่ใช้", value = OS, inline = true },
-            { name = "🧰 Executor", value = ExecutorText, inline = false },
-            { name = "🌍 ชื่อแมพ", value = "["..placeName.."]("..placeLink..")", inline = false },
-            { name = "🆔 JobId", value = tostring(game.JobId), inline = false },
-            { name = "🕒 เวลาตอนรัน", value = timestamp, inline = false }
-        }
-    }}
-}
-
-local body = HttpService:JSONEncode(data)
-
-request({
-    Url = WEBHOOK_URL,
-    Method = "POST",
-    Headers = { ["Content-Type"] = "application/json" },
-    Body = body
-})
-
--- เสียง
+-- เสียงตืดๆตอนโหลด
 local SoundService = game:GetService("SoundService")
 local loadSound = Instance.new("Sound")
 loadSound.SoundId = "rbxassetid://98797174600699"
@@ -107,7 +9,7 @@ loadSound:Play()
 game.Debris:AddItem(loadSound, 3)
 
 
--- Load x2zu UI Library
+-- ยูไอ
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/x2zu/OPEN-SOURCE-UI-ROBLOX/refs/heads/main/X2ZU%20UI%20ROBLOX%20OPEN%20SOURCE/DummyUi-leak-by-x2zu/fetching-main/Tools/Framework.luau"))()
 
 local Window = Library:Window({
@@ -328,7 +230,7 @@ end
 -- ===================== Aimbot =====================
 
 
--- ===================== UI Tabs =====================
+-- ===================== แท็ป=====================
 local MainTab = Window:Tab({Title="Main", Icon="star"})
 
 MainTab:Toggle({
@@ -476,12 +378,12 @@ for _, plr in ipairs(Players:GetPlayers()) do
     setupRespawnListener(plr)
 end
 
--- listener สำหรับผู้เล่นใหม่ที่เข้ามา
+-- listener คนใหม่เข้ามา
 Players.PlayerAdded:Connect(function(plr)
     setupRespawnListener(plr)
 end)
 
--- listener สำหรับ respawn ตัวเอง
+-- listener รีสพาวตัวเอง
 LocalPlayer.CharacterAdded:Connect(function(char)
     if DamageAuraActive then
         task.wait(0.1)
@@ -542,7 +444,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local arrestRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ArrestPlayer")
 
-local arrestAuraEnabled = false -- เริ่มปิด
+local arrestAuraEnabled = false 
 local AURA_DISTANCE = 20 
 
 local function arrestPlayer(target)
@@ -698,7 +600,6 @@ function stopArrestAura()
     teleportToStart()
 end
 
--- UI toggle ตัวอย่าง
 MainTab:Toggle({
     Title = "จับโจรทุกคน",
     Desc = "ต้องเป็นตำรวจ",
@@ -885,9 +786,8 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
---== AimTab UI CONNECTIONS ==--
+--== AimTab พวกล็อคหัว ==--
 
--- Toggle Silent Aim
 AimTab:Toggle({
     Title = "Silent Aim",
     Desc = "กระสุนตามหัว",
@@ -897,7 +797,6 @@ AimTab:Toggle({
     end
 })
 
--- Slider FOV
 AimTab:Slider({
     Title = "FOV",
     Min = 50,
@@ -917,7 +816,7 @@ local teams = {
     Criminals = "ล็อคแค่ทีม Criminals"
 }
 
--- ปุ่มล็อคทุกทีม (ไม่รวมทีมตัวเอง)
+-- ปุ่มล็อคทุกทีม
 AimTab:Toggle({
     Title = "ล็อคทุกทีม",
     Value = false,
