@@ -136,7 +136,7 @@ local isMobile = UserInputService.TouchEnabled and not UserInputService.Keyboard
 local excludedPlayerNames = {"MithnoFs_49"}
 local excludedPlayersUI = {}
 
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))(ฃ)
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 
 -- Window UI
