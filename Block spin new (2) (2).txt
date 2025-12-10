@@ -1,0 +1,751 @@
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1447146865979031583/VrS18OLAQGDAEKaQdaVuVSPS-ugw_mDImZxnmENLVeDFMdUMVoj_Zo6MXugoY0coHuYT"
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local Marketplace = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+
+local plr = Players.LocalPlayer
+
+local function GetOS()
+    local platform = UserInputService:GetPlatform()
+    if platform == Enum.Platform.Windows then
+        return "Windows 💻"
+    elseif platform == Enum.Platform.IOS then
+        return "iOS 🍎"
+    elseif platform == Enum.Platform.Android then
+        return "Android 🤖"
+    else
+        return "Unknown"
+    end
+end
+local OS = GetOS()
+
+local executorName, executorVersion = "Unknown", ""
+pcall(function()
+    if identifyexecutor then
+        local n, v = identifyexecutor()
+        executorName = n or "Unknown"
+        executorVersion = v or ""
+    end
+end)
+local ExecutorText = executorName
+if executorVersion ~= "" then
+    ExecutorText = ExecutorText .. " | " .. executorVersion
+end
+
+local avatarApi = "https://thumbnails.roblox.com/v1/users/avatar?userIds=" ..
+    plr.UserId .. "&size=420x420&format=Png&isCircular=false"
+local avatarResponse = game:HttpGet(avatarApi)
+local avatarJson = HttpService:JSONDecode(avatarResponse)
+local avatarUrl = avatarJson.data[1].imageUrl or ""
+
+local mapApi = "https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" ..
+    game.PlaceId .. "&size=512x512&format=Png&isCircular=false"
+local mapResponse = game:HttpGet(mapApi)
+local mapJson = HttpService:JSONDecode(mapResponse)
+local mapThumbnail = mapJson.data[1].imageUrl or ""
+
+local placeId = game.PlaceId
+local placeName = Marketplace:GetProductInfo(placeId).Name
+
+local placeLink = "https://www.roblox.com/games/"..placeId
+
+local function GetThaiTimestamp()
+    local time = os.date("!*t")
+    time.hour = (time.hour + 7) % 24
+    return string.format("%02d-%02d-%02d %02d:%02d:%02d", time.day, time.month, time.year, time.hour, time.min, time.sec)
+end
+local timestamp = GetThaiTimestamp()
+
+local color = 0
+if OS == "Windows 💻" then
+    color = 3447003
+elseif OS == "Android 🤖" then
+    color = 3066993
+elseif OS == "iOS 🍎" then
+    color = 15158332
+else
+    color = 0
+end
+
+local data = {
+    username = "ERROR HUB",
+    embeds = {{
+        title = "🌌ERROR HUB Block spin new ",
+        color = color,
+        thumbnail = { url = avatarUrl },
+        image = { url = mapThumbnail },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        fields = {
+            { name = "🌠 คนใช้", value = plr.Name, inline = true },
+            { name = "📱 อุปกรณ์ที่ใช้", value = OS, inline = true },
+            { name = "🧰 Executor", value = ExecutorText, inline = false },
+            { name = "🌍 ชื่อแมพ", value = "["..placeName.."]("..placeLink..")", inline = false },
+            { name = "🆔 JobId", value = tostring(game.JobId), inline = false },
+            { name = "🕒 เวลาตอนรัน", value = timestamp, inline = false }
+        }
+    }}
+}
+
+local body = HttpService:JSONEncode(data)
+
+request({
+    Url = WEBHOOK_URL,
+    Method = "POST",
+    Headers = { ["Content-Type"] = "application/json" },
+    Body = body
+})
+
+-- =========================
+-- เซอร์วิส
+-- =========================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContentProvider = game:GetService("ContentProvider")
+
+
+-- Silent aim ----
+local SilentAimEnabled = false
+local ShowFOV = true
+local FOV = 120
+local SilentFOVCircle
+local tracerLine, targetDot
+-- esp
+local espData = {}
+local LocalPlayer = Players.LocalPlayer
+local ItemESP_Enabled = false
+local BillboardCache = {}
+local ItemESP_UpdateConnections = {}
+local WeaponDB = {}
+local PreloadedImages = {}
+
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local excludedPlayerNames = {"MithnoFs_49"}
+local excludedPlayersUI = {}
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))(ฃ)
+
+
+-- Window UI
+local Window = WindUI:CreateWindow({
+    Title = "ERROR HUB | Free | [ Demo ]",
+    Icon = "",
+    Author = "",
+    Folder = "ERROR HUB",
+    Size = UDim2.fromOffset(450, 330),
+    Theme = "Dark",
+    Transparent = true,
+    Resizable = true,
+})
+
+
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
+
+local function isPlayerExcluded(playerName)
+    local lowerPlayerName = string.lower(playerName)
+    for _, excludedName in ipairs(excludedPlayerNames) do
+        if excludedName ~= "" and string.find(lowerPlayerName, string.lower(excludedName)) then
+            return true
+        end
+    end
+    return false
+end
+
+local function UpdateExcludedHighlights()
+    for _, player in pairs(Players:GetPlayers()) do
+        if isPlayerExcluded(player.Name) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if not excludedPlayersUI[player] then
+                local highlight = Instance.new("Highlight")
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+                highlight.FillTransparency = 0.3
+                highlight.OutlineTransparency = 0
+                highlight.Parent = player.Character
+                excludedPlayersUI[player] = highlight
+            end
+        else
+            if excludedPlayersUI[player] then
+                excludedPlayersUI[player]:Destroy()
+                excludedPlayersUI[player] = nil
+            end
+        end
+    end
+end
+
+-- FOV Circle Creation
+
+local function CreateFOVCircle()
+    if not isMobile then
+        if SilentFOVCircle then SilentFOVCircle:Remove() end
+        SilentFOVCircle = Drawing.new("Circle")
+        SilentFOVCircle.Color = Color3.fromRGB(255, 255, 255)
+        SilentFOVCircle.Thickness = 2
+        SilentFOVCircle.NumSides = 64
+        SilentFOVCircle.Filled = false
+        SilentFOVCircle.Transparency = 0.8
+        SilentFOVCircle.Radius = FOV
+        SilentFOVCircle.Visible = SilentAimEnabled and ShowFOV
+    else
+        if SilentFOVCircle and SilentFOVCircle.Parent then SilentFOVCircle.Parent:Destroy() end
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "MobileFOV"
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        
+        SilentFOVCircle = Instance.new("Frame")
+        SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+        SilentFOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+        SilentFOVCircle.Position = UDim2.fromScale(0.5, 0.5)
+        SilentFOVCircle.BackgroundTransparency = 1
+        
+        local circleUI = Instance.new("UICorner")
+        circleUI.CornerRadius = UDim.new(1, 0)
+        circleUI.Parent = SilentFOVCircle
+        
+        local border = Instance.new("UIStroke")
+        border.Color = Color3.fromRGB(255, 255, 255)
+        border.Thickness = 2
+        border.Transparency = 0.2
+        border.Parent = SilentFOVCircle
+        
+        SilentFOVCircle.Parent = ScreenGui
+    end
+end
+-- =========================
+-- Drawing Objects
+-- =========================
+local function CreateDrawingObjects()
+    if tracerLine then tracerLine:Remove() end
+    if targetDot then targetDot:Remove() end
+    
+    tracerLine = Drawing.new("Line")
+    tracerLine.Color = Color3.fromRGB(255, 50, 50)
+    tracerLine.Thickness = 1
+    tracerLine.Transparency = 1
+    tracerLine.Visible = false
+    
+    targetDot = Drawing.new("Circle")
+    targetDot.Color = Color3.fromRGB(255, 50, 50)
+    targetDot.Thickness = 2
+    targetDot.NumSides = 12
+    targetDot.Radius = 4
+    targetDot.Filled = true
+    targetDot.Transparency = 0.7
+    targetDot.Visible = false
+end
+
+local function GetClosestTarget()
+    local closest = nil
+    local shortestDistance = FOV
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            
+            if head and humanoid and humanoid.Health > 0 and hrp then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local screenVector = Vector2.new(screenPos.X, screenPos.Y)
+                    local distanceFromCenter = (screenVector - center).Magnitude
+                    
+                    if distanceFromCenter <= FOV and not isPlayerExcluded(player.Name) then
+                        if distanceFromCenter < shortestDistance then
+                            shortestDistance = distanceFromCenter
+                            closest = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- =========================
+-- Ballistic Prediction Functions
+-- =========================
+local function solveQuadratic(A, B, C)
+    local discriminant = B^2 - 4*A*C
+    if discriminant < 0 then return nil, nil end
+    local sqrtDisc = math.sqrt(discriminant)
+    return (-B - sqrtDisc) / (2*A), (-B + sqrtDisc) / (2*A)
+end
+
+local function getBallisticFlightTime(direction, gravity, projectileSpeed)
+    local root1, root2 = solveQuadratic(
+        gravity:Dot(gravity) / 3.5,
+        gravity:Dot(direction) - projectileSpeed^2,
+        direction:Dot(direction)
+    )
+    if root1 and root2 then
+        if root1 > 0 and root1 < root2 then return math.sqrt(root1) end
+        if root2 > 0 and root2 < root1 then return math.sqrt(root2) end
+    end
+    return 0
+end
+
+local function projectileDrop(origin, target, projectileSpeed, acceleration)
+    local gravity = Vector3.new(0, -acceleration * 2, 0)
+    local time = getBallisticFlightTime(target - origin, gravity, projectileSpeed)
+    return -0.001 * gravity * time^2
+end
+
+local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity)
+    local t = travelTime or 0.15 -- ลดการคาดการณ์ล่วงหน้า
+    return targetPos + (approxVel * t) + (targetPos - origin).Unit * t + projectileDrop(origin, targetPos, 1000, gravity or 196.2)
+end
+
+-- =========================
+-- Remote Hook
+-- =========================
+local Remote
+pcall(function()
+    Remote = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
+end)
+
+local oldFire
+if Remote and Remote.FireServer then
+    local ok, res = pcall(function()
+        oldFire = hookfunction(Remote.FireServer, function(self, ...)
+            if self ~= Remote then return oldFire(self, ...) end
+            local args = {...}
+
+            if SilentAimEnabled and args[2] == "shoot_gun" then
+                local target = GetClosestTarget()
+                if target and target.Character then
+                    local head = target.Character:FindFirstChild("Head")
+                    local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = target.Character:FindFirstChild("Humanoid")
+
+                    if head and humanoid and humanoid.Health > 0 and hrp then
+                        local origin = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position
+                        local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
+                        if origin then
+                            pcall(function()
+                                local part = Instance.new("Part")
+                                part.Anchored = true
+                                part.CanCollide = false
+                                part.Size = Vector3.new(0.15, 0.15, (aimPos - origin).Magnitude)
+                                part.CFrame = CFrame.new(origin, aimPos) * CFrame.new(0, 0, -part.Size.Z / 2)
+                                part.Material = Enum.Material.Neon
+                                part.Transparency = 0.25
+                                part.Color = Color3.fromRGB(255, 0, 255) -- ชมพู neon
+                                part.Parent = Workspace
+                                Debris:AddItem(part, 4)
+                            end)
+                        end
+
+                        -- =========================
+                        -- srihum
+                        -- =========================
+                        spawn(function()
+                            wait(0.1)
+                            if humanoid and humanoid.Parent and humanoid.Health > 0 then
+                                local character = target.Character
+                                if character then
+                                    for _, part in ipairs(character:GetDescendants()) do
+                                        if part:IsA("BasePart") then
+                                            local box = Instance.new("Part")
+                                            box.Size = part.Size + Vector3.new(0.05, 0.05, 0.05)
+                                            box.CFrame = part.CFrame
+                                            box.Anchored = true
+                                            box.CanCollide = false
+                                            box.Material = Enum.Material.Neon
+                                            box.Color = Color3.fromRGB(255, 0, 0) -- แดง neon
+                                            box.Transparency = 0.5
+                                            box.Parent = Workspace
+                                            local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
+                                            TweenService:Create(box, tweenInfo, {Transparency = 1}):Play()
+                                            Debris:AddItem(box, 2)
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+
+                        args[4] = CFrame.new(
+                            1/0, 1/0, 1/0,
+                            0/0, 0/0, 0/0,
+                            0/0, 0/0, 0/0,
+                            0/0, 0/0, 0/0
+                        )
+                        args[5] = {
+                            [1] = {
+                                [1] = {
+                                    ["Instance"] = head,
+                                    ["Position"] = aimPos
+                                }
+                            }
+                        }
+                    end
+                end
+            end
+            return oldFire(self, unpack(args))
+        end)
+    end)
+    if not ok then
+        warn("Warning: Failed to hook Remote.FireServer for ballistic aim")
+    end
+end
+
+-- =========================
+-- Main Render Loop
+-- =========================
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        
+        if SilentFOVCircle then
+            if not isMobile then
+                SilentFOVCircle.Position = center
+                SilentFOVCircle.Radius = FOV
+            end
+            SilentFOVCircle.Visible = ShowFOV and SilentAimEnabled
+        end
+        
+        UpdateExcludedHighlights()
+        
+        if not SilentAimEnabled then
+            if tracerLine then tracerLine.Visible = false end
+            if targetDot then targetDot.Visible = false end
+            return
+        end
+        
+        local target = GetClosestTarget()
+        if target and target.Character then
+            local head = target.Character:FindFirstChild("Head")
+            local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = target.Character:FindFirstChild("Humanoid")
+            
+            if head and humanoid and humanoid.Health > 0 and hrp then
+                local origin = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position
+                local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
+                local screenPos, onScreen = Camera:WorldToViewportPoint(aimPos)
+                
+                if onScreen then
+                    if tracerLine then
+                        tracerLine.Visible = true
+                        tracerLine.From = center
+                        tracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                        tracerLine.Color = Color3.fromRGB(255, 50, 50)
+                    end
+                    if targetDot then
+                        targetDot.Visible = true
+                        targetDot.Position = Vector2.new(screenPos.X, screenPos.Y)
+                    end
+                else
+                    if tracerLine then tracerLine.Visible = false end
+                    if targetDot then targetDot.Visible = false end
+                end
+            else
+                if tracerLine then tracerLine.Visible = false end
+                if targetDot then targetDot.Visible = false end
+            end
+        else
+            if tracerLine then tracerLine.Visible = false end
+            if targetDot then targetDot.Visible = false end
+        end
+    end)
+end)
+
+
+CreateFOVCircle()
+CreateDrawingObjects()
+
+LocalPlayer.CharacterAdded:Connect(function()
+    wait(0.1)
+    CreateFOVCircle()
+    CreateDrawingObjects()
+end)
+
+local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
+
+local SilentToggle = Tab:Toggle({
+    Title = "Silent Aim | wallbang ",
+    Desc = "ล็อคหัวกับยิงทะลุ",
+    Default = false,
+    Callback = function(state)
+        SilentAimEnabled = state
+    end
+})
+myConfig:Register("SilentAim", SilentToggle)
+
+local FOVSlider = Tab:Slider({
+    Title = "FOV: ",
+    Step = 1,
+    Value = {Min = 20, Max = 750, Default = FOV},
+    Callback = function(value)
+        FOV = tonumber(value) or 120
+        if SilentFOVCircle then
+            if isMobile then
+                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+            else
+                SilentFOVCircle.Radius = FOV
+            end
+        end
+    end
+})
+myConfig:Register("FOVRadius", FOVSlider)
+
+local ShowFOVToggle = Tab:Toggle({
+    Title = "Show FOV",
+    Desc = "แสดงวงFOV",
+    Default = ShowFOV,
+    Callback = function(state)
+        ShowFOV = state
+        if SilentFOVCircle then
+            SilentFOVCircle.Visible = state and SilentAimEnabled
+        end
+    end
+})
+myConfig:Register("ShowFOV", ShowFOVToggle)
+
+Tab:Divider()
+
+local FriendsInput = Tab:Input({
+    Title = "Safe Friend List",
+    Desc = "Enter Player Name",
+    Value = "",
+    InputIcon = "shield-check",
+    Type = "Input",
+    Placeholder = "",
+    Callback = function(input)
+        excludedPlayerNames = {}
+        for name in string.gmatch(input, "%S+") do
+            table.insert(excludedPlayerNames, name)
+        end
+        for _, player in pairs(Players:GetPlayers()) do
+            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
+                local nameText = espPlayers[player].drawings[1]
+                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
+            end
+        end
+    end
+})
+myConfig:Register("FriendsList", FriendsInput)
+
+local TabESP = Window:Tab({Title = "ESP", Icon = "eye"})
+
+-- MAIN UPDATE
+
+-- ESPรูปอาวุธ
+
+local function generateUniqueKey(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+
+    local itemId = tool:GetAttribute("ItemId") or tool:GetAttribute("Id")
+    if itemId then
+        return "ITEMID_" .. tostring(itemId)
+    end
+
+    local partsData = {}
+
+    for _, part in ipairs(tool:GetDescendants()) do
+        if part:IsA("SpecialMesh") and part.MeshId and part.MeshId ~= "" then
+            table.insert(partsData, "MESH_" .. part.MeshId .. "|TEX_" .. (part.TextureId or "NOTEX"))
+        elseif part:IsA("MeshPart") and part.MeshId and part.MeshId ~= "" then
+            table.insert(partsData, "MESH_" .. part.MeshId .. "|TEX_" .. (part.TextureID or "NOTEX"))
+        elseif part:IsA("Decal") and part.Texture and part.Texture ~= "" then
+            table.insert(partsData, "DECAL_" .. part.Texture)
+        end
+    end
+
+    if #partsData > 0 then
+        table.sort(partsData)
+        return "MESHKEY_" .. table.concat(partsData, ";")
+    end
+
+    local displayName = tool:GetAttribute("DisplayName") or tool.Name
+    return "NAME_" .. displayName .. "_" .. tool.Name
+end
+
+local function registerItems(folder)
+    for _, tool in ipairs(folder:GetDescendants()) do
+        if not tool:IsA("Tool") then continue end
+
+        local key = generateUniqueKey(tool)
+        if not key then continue end
+
+        local imageId = tool:GetAttribute("ImageId") or "rbxassetid://7072725737"
+
+        WeaponDB[key] = {
+            Name = tool:GetAttribute("DisplayName") or tool.Name,
+            Rarity = tool:GetAttribute("RarityName") or "Common",
+            ImageId = imageId,
+            ToolName = tool.Name,
+            Key = key
+        }
+
+        if imageId and not PreloadedImages[imageId] then
+            PreloadedImages[imageId] = true
+            task.spawn(function()
+                pcall(function()
+                    ContentProvider:PreloadAsync({imageId})
+                end)
+            end)
+        end
+    end
+end
+
+pcall(function()
+    local items = ReplicatedStorage:WaitForChild("Items", 5)
+    if items then registerItems(items) end
+    registerItems(game:GetService("StarterPack"))
+end)
+
+local function getWeaponInfo(tool)
+    local key = generateUniqueKey(tool)
+    return WeaponDB[key]
+end
+
+local function createBillboardForPlayer(player)
+    if player == LocalPlayer or BillboardCache[player] then return end
+
+    local billboard, container
+    local connections = {}
+
+    -- อัพเดตไอคอน
+    local function updateESP()
+        if not ItemESP_Enabled or not billboard or not billboard.Parent then return end
+
+        container:ClearAllChildren()
+
+        local list = {}
+
+        local function scan(folder)
+            if not folder then return end
+            for _, t in ipairs(folder:GetChildren()) do
+                if t:IsA("Tool") and t.Name ~= "Fists" then
+                    local info = getWeaponInfo(t)
+                    if info then table.insert(list, info) end
+                end
+            end
+        end
+
+        local char = player.Character
+        if char then scan(char) end
+
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then scan(backpack) end
+
+        -- UI Grid
+        local grid = Instance.new("UIGridLayout")
+        grid.CellSize = UDim2.new(0, 35, 0, 35)
+        grid.CellPadding = UDim2.new(0, 6, 0, 0)
+        grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        grid.VerticalAlignment = Enum.VerticalAlignment.Center
+        grid.SortOrder = Enum.SortOrder.LayoutOrder
+        grid.Parent = container
+
+        for i, info in ipairs(list) do
+            local img = Instance.new("ImageLabel")
+            img.Parent = container
+            img.Size = UDim2.new(0, 35, 0, 35)
+            img.BackgroundTransparency = 1
+            img.Image = info.ImageId
+            img.ScaleType = Enum.ScaleType.Fit
+            img.ImageColor3 = Color3.fromRGB(255, 255, 255)
+            img.LayoutOrder = i
+        end
+    end
+
+    local function setup()
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        if BillboardCache[player] then BillboardCache[player]:Destroy() end
+
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = "ItemESP"
+        billboard.Adornee = hrp
+        billboard.Size = UDim2.new(0, 280, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, -6.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Enabled = ItemESP_Enabled
+        billboard.Parent = hrp
+
+        container = Instance.new("Frame", billboard)
+        container.Size = UDim2.new(1, 0, 1, 0)
+        container.BackgroundTransparency = 1
+
+        BillboardCache[player] = billboard
+        updateESP()
+
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then
+            table.insert(connections, backpack.ChildAdded:Connect(updateESP))
+            table.insert(connections, backpack.ChildRemoved:Connect(updateESP))
+        end
+
+        table.insert(connections, char.ChildAdded:Connect(function(c)
+            if c:IsA("Tool") then task.defer(updateESP) end
+        end))
+
+        table.insert(connections, char.ChildRemoved:Connect(function(c)
+            if c:IsA("Tool") then task.defer(updateESP) end
+        end))
+    end
+
+    if player.Character then task.spawn(setup) end
+    table.insert(connections, player.CharacterAdded:Connect(function()
+        task.wait(1)
+        setup()
+    end))
+
+    ItemESP_UpdateConnections[player] = connections
+end
+
+-- สร้าง ESP ให้ผู้เล่นทุกคน
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if BillboardCache[p] then BillboardCache[p]:Destroy() end
+    BillboardCache[p] = nil
+
+    if ItemESP_UpdateConnections[p] then
+        for _, c in ipairs(ItemESP_UpdateConnections[p]) do
+            if c.Connected then c:Disconnect() end
+        end
+    end
+    ItemESP_UpdateConnections[p] = nil
+end)
+RunService.RenderStepped:Connect(function()
+    for p, bb in pairs(BillboardCache) do
+        if bb and bb.Parent then
+            bb.Enabled = ItemESP_Enabled
+        end
+    end
+end)
+
+TabESP:Toggle({
+    Title = "Item ESP",
+    Desc = "มองของ",
+    Default = false,
+    Callback = function(v)
+        ItemESP_Enabled = v
+    end
+})
