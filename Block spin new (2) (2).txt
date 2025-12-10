@@ -749,3 +749,369 @@ TabESP:Toggle({
         ItemESP_Enabled = v
     end
 })
+
+
+
+local TabPlayer = Window:Tab({Title = "Player", Icon = ""})
+
+-- =========================
+-- Services
+-- =========================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+local Workspace = game:GetService("Workspace")
+
+-- =========================
+-- Local Player & Character
+-- =========================
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- =========================
+-- Movement Variables
+-- =========================
+local walkSpeedEnabled = false
+local speedValue = 0.05
+local FlyEnabled = false
+local isFlyingUp = false
+local jumpPower = 40
+local AutoSprintEnabled = false
+local moveConnection = nil
+local flyJumpConnection = nil
+
+-- =========================
+-- Remotes and Counter Table
+-- =========================
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local CounterTable
+
+pcall(
+    function()
+        for _, Obj in ipairs(getgc(true)) do
+            if typeof(Obj) == "table" and rawget(Obj, "event") and rawget(Obj, "func") then
+                CounterTable = Obj
+                break
+            end
+        end
+    end
+)
+
+-- =========================
+-- Net Function for Infinite Stamina
+-- =========================
+local Net = {}
+function Net.send(...)
+    local args = {...}
+    if CounterTable then
+        CounterTable.event = (CounterTable.event or 0) + 1
+        pcall(
+            function()
+                Remotes.Send:FireServer(CounterTable.event, unpack(args))
+            end
+        )
+    end
+end
+
+-- =========================
+-- Character Setup Function
+-- =========================
+local function setupCharacter(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    HumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    
+    if moveConnection then
+        pcall(function() moveConnection:Disconnect() end)
+    end
+    
+    moveConnection =
+        RunService.RenderStepped:Connect(
+        function()
+            if walkSpeedEnabled and Humanoid and HumanoidRootPart then
+                if Humanoid.MoveDirection.Magnitude > 0 then
+                    HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (Humanoid.MoveDirection.Unit * speedValue)
+                end
+            end
+        end
+    )
+end
+
+-- =========================
+-- Jump Power System Functions
+-- =========================
+-- Fly Logic
+RunService.RenderStepped:Connect(function()
+    if FlyEnabled and HumanoidRootPart then
+        if isFlyingUp then
+            local v = HumanoidRootPart.Velocity
+            HumanoidRootPart.Velocity = Vector3.new(v.X, jumpPower, v.Z)
+        end
+    end
+end)
+
+-- PC: Spacebar 
+UserInputService.InputBegan:Connect(function(input)
+    if FlyEnabled and input.KeyCode == Enum.KeyCode.Space then
+        isFlyingUp = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        isFlyingUp = false
+    end
+end)
+
+-- Mobile: กระโดดปกติ
+UserInputService.JumpRequest:Connect(function()
+    if FlyEnabled then
+        isFlyingUp = true
+        task.delay(0.12, function()
+            isFlyingUp = false
+        end
+    end
+end)
+
+-- Fly Bind
+ContextActionService:BindAction(
+    "FlyUp",
+    function(actionName, inputState, inputObject)
+        if not FlyEnabled then
+            return Enum.ContextActionResult.Pass
+        end
+        local isJumpPressed = false
+        
+        if inputObject.UserInputType == Enum.UserInputType.Keyboard and inputObject.KeyCode == Enum.KeyCode.Space then
+            isJumpPressed = true
+        end
+        
+        if inputObject.UserInputType == Enum.UserInputType.Touch then
+            isJumpPressed = true
+        end
+        
+        if isJumpPressed then
+            if inputState == Enum.UserInputState.Begin then
+                isFlyingUp = true
+                if Humanoid then
+                    Humanoid.Jump = true
+                end
+                return Enum.ContextActionResult.Sink
+            elseif inputState == Enum.UserInputState.End then
+                isFlyingUp = false
+                return Enum.ContextActionResult.Sink
+            end
+        end
+        return Enum.ContextActionResult.Pass
+    end,
+    false,
+    Enum.KeyCode.Space
+)
+
+-- Fly Update
+RunService.RenderStepped:Connect(
+    function(deltaTime)
+        if FlyEnabled and isFlyingUp then
+            if HumanoidRootPart then
+                HumanoidRootPart.Velocity =
+                    Vector3.new(HumanoidRootPart.Velocity.X, jumpPower, HumanoidRootPart.Velocity.Z)
+            end
+        end
+    end
+)
+
+-- Mobile Jump Connection
+LocalPlayer.CharacterAdded:Connect(
+    function(char)
+        local hum = char:WaitForChild("Humanoid")
+        if flyJumpConnection then
+            flyJumpConnection:Disconnect()
+        end
+        flyJumpConnection =
+            hum:GetPropertyChangedSignal("Jumping"):Connect(
+            function()
+                if FlyEnabled and hum.Jumping then
+                    isFlyingUp = true
+                else
+                    isFlyingUp = false
+                end
+            end
+        )
+    end
+)
+
+-- =========================
+-- Character Connection
+-- =========================
+if LocalPlayer.Character then
+    setupCharacter(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(setupCharacter)
+
+-- =========================
+-- UI Toggles (Assume Window and Tab_Character are already created)
+-- =========================
+
+-- Walkspeed Toggle
+local WalkSpeedToggle =
+    Tab_Character:Toggle(
+    {
+        Title = "Walk Speed",
+        Default = false,
+        Callback = function(state)
+            walkSpeedEnabled = state
+        end
+    }
+)
+
+-- Speed Multiplier Slider
+local SpeedSlider =
+    Tab_Character:Slider(
+    {
+        Title = "Speed Multiplier",
+        Step = 0.5,
+        Value = {
+            Min = 1,
+            Max = 3,
+            Default = 2
+        },
+        Callback = function(value)
+            speedValue = value * 0.07
+        end
+    }
+)
+
+-- Jump Power Toggle
+local JumpPowerToggle = Tab_Character:Toggle({
+    Title = "Jump Power",
+    Desc = "กระโดดสูง",
+    Default = false,
+    Callback = function(state)
+        FlyEnabled = state
+    end
+})
+
+-- Jump Power Slider
+local JumpSlide = Tab_Character:Slider({
+    Title = "Jump Height",
+    Desc = "ปรับความสูงกระโดด",
+    Step = 1,
+    Value = {
+        Min = 20,
+        Max = 200,
+        Default = jumpPower
+    },
+    Callback = function(value)
+        jumpPower = tonumber(value) or 40
+    end
+})
+
+-- Infinite Stamina Toggle
+local AutoSprintToggle =
+    Tab_Character:Toggle(
+    {
+        Title = "Infinite Stamina",
+        Default = false,
+        Callback = function(state)
+            AutoSprintEnabled = state
+            if AutoSprintEnabled then
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar then
+                        local Old = SprintBar.update
+                        SprintBar.update = function(...)
+                            return Old(
+                                function()
+                                    return 1
+                                end
+                            )
+                        end
+                        
+                        getgenv().OriginalSprintUpdate = Old
+                        getgenv().AutoSprintLoop =
+                            task.spawn(
+                            function()
+                                while AutoSprintEnabled do
+                                    pcall(
+                                        function()
+                                            Net.send("set_sprinting_1", true)
+                                            task.wait(0.5)
+                                            Net.send("set_sprinting_1", false)
+                                        end
+                                    )
+                                    task.wait(0.1)
+                                end
+                                pcall(
+                                    function()
+                                        Net.send("set_sprinting_1", false)
+                                    end
+                                )
+                            end
+                        )
+                    else
+                        warn("❌ ไม่พบ SprintBar!")
+                        AutoSprintEnabled = false
+                        if AutoSprintToggle.Set then
+                            AutoSprintToggle:Set(false)
+                        end
+                    end
+                else
+                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
+                    AutoSprintEnabled = false
+                    if AutoSprintToggle.Set then
+                        AutoSprintToggle:Set(false)
+                    end
+                end
+            else
+                if getgenv().AutoSprintLoop then
+                    task.cancel(getgenv().AutoSprintLoop)
+                    getgenv().AutoSprintLoop = nil
+                end
+                
+                pcall(
+                    function()
+                        Net.send("set_sprinting_1", false)
+                    end
+                )
+                
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar and getgenv().OriginalSprintUpdate then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                        getgenv().OriginalSprintUpdate = nil
+                    end
+                end
+            end
+        end
+    }
+)
+
+-- =========================
+-- Register Configs (if config system exists)
+-- =========================
+if myConfig and myConfig.Register then
+    myConfig:Register("WalkSpeed", WalkSpeedToggle)
+    myConfig:Register("SpeedMultiplier", SpeedSlider)
+    myConfig:Register("JumpPowerToggle", JumpPowerToggle)
+    myConfig:Register("JumpSlide", JumpSlide)
+    myConfig:Register("AutoSprint", AutoSprintToggle)
+end
+
