@@ -113,6 +113,10 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+local runService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
 
 -- =========================
 -- Local Variables
@@ -689,10 +693,7 @@ myConfig:Register("AutoSprint", AutoSprintToggle)
 -- 3D BOX ESP (ทั้งหมดรวมในไฟล์เดียว)
 ------------------------------------------------------------------
 
-local players = game:GetService("Players")
-local localPlayer = players.LocalPlayer
-local runService = game:GetService("RunService")
-local camera = workspace.CurrentCamera
+
 
 -- Colors based on health
 local function getHealthColor(health, maxHealth)
@@ -915,179 +916,119 @@ ESPTab:Toggle({
     end
 })
 
--- ===========================================
--- SIMPLE HEALTH ESP (FINAL COMBINED VERSION)
--- ===========================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-local SimpleHealthESP_Enabled = false
-local SimpleHealthESP_Data = {}
+local HealthESP_Enabled = false
+local ActiveBars = {} -- เก็บ GUI ของแต่ละ player
 
--- สีตาม Hex ที่คุณต้องการ
-local function GetHealthColor(p)
-    if p > 0.6 then
-        return Color3.fromRGB(0, 255, 0) -- #00FF00
-    elseif p > 0.3 then
-        return Color3.fromRGB(255, 255, 0) -- #FFFF00
-    else
-        return Color3.fromRGB(255, 0, 0) -- #FF0000
+
+local function removeHealthBar(player)
+    if ActiveBars[player] then
+        ActiveBars[player]:Destroy()
+        ActiveBars[player] = nil
     end
 end
 
--- เพิ่ม ESP ให้ผู้เล่น
-local function AddHealthESP(player)
-    if player == LocalPlayer then return end
-    if SimpleHealthESP_Data[player] then return end
-
-    local bg = Drawing.new("Square")
-    local fg = Drawing.new("Square")
-    local txt = Drawing.new("Text")
-
-    bg.Filled = true
-    bg.Color = Color3.fromRGB(30, 30, 30)
-    bg.Transparency = 0.5
-    bg.Visible = false
-
-    fg.Filled = true
-    fg.Transparency = 0.25
-    fg.Visible = false
-
-    txt.Size = 13
-    txt.Center = true
-    txt.Outline = true
-    txt.OutlineColor = Color3.fromRGB(0, 0, 0)
-    txt.Font = 2
-    txt.Visible = false
-
-    local conn = RunService.RenderStepped:Connect(function()
-        if not SimpleHealthESP_Enabled then
-            bg.Visible = false
-            fg.Visible = false
-            txt.Visible = false
-            return
-        end
-
-        local char = player.Character
-        if not char then
-            bg.Visible = false
-            fg.Visible = false
-            txt.Visible = false
-            return
-        end
-
-        local hum = char:FindFirstChild("Humanoid")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hum or not hrp or hum.Health <= 0 then
-            bg.Visible = false
-            fg.Visible = false
-            txt.Visible = false
-            return
-        end
-
-        local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-        if not onScreen then
-            bg.Visible = false
-            fg.Visible = false
-            txt.Visible = false
-            return
-        end
-
-        local percent = hum.Health / hum.MaxHealth
-        local color = GetHealthColor(percent)
-
-        -- ลดความสูงของแทบ HP ลง
-        local width = 65
-        local height = 4      -- <<< ลดจาก 6 เหลือ 4
-        local x = pos.X - width/2
-        local y = pos.Y - 28  -- <<< ลดให้ลงมาใกล้หัวมากขึ้น
-
-        -- BG
-        bg.Size = Vector2.new(width, height)
-        bg.Position = Vector2.new(x, y)
-        bg.Visible = true
-
-        -- FG (แถบ HP)
-        fg.Size = Vector2.new(math.max(3, width * percent), height)
-        fg.Position = Vector2.new(x, y)
-        fg.Color = color
-        fg.Visible = true
-
-        -- TEXT
-        txt.Text = math.floor(hum.Health) .. "/" .. math.floor(hum.MaxHealth)
-        txt.Position = Vector2.new(pos.X, y - 12)
-        txt.Color = color
-        txt.Visible = true
-    end)
-
-    SimpleHealthESP_Data[player] = {bg = bg, fg = fg, txt = txt, conn = conn}
-end
-
--- ลบ ESP ของผู้เล่น
-local function RemoveHealthESP(player)
-    local d = SimpleHealthESP_Data[player]
-    if not d then return end
-
-    if d.conn then d.conn:Disconnect() end
-    if d.bg then d.bg:Remove() end
-    if d.fg then d.fg:Remove() end
-    if d.txt then d.txt:Remove() end
-
-    SimpleHealthESP_Data[player] = nil
-end
-
--- ลบทั้งหมด
-local function ClearAllHealthESP()
-    for plr,_ in pairs(SimpleHealthESP_Data) do
-        RemoveHealthESP(plr)
+local function removeAll()
+    for player, gui in pairs(ActiveBars) do
+        gui:Destroy()
     end
+    ActiveBars = {}
 end
 
--- โหลดผู้เล่นทั้งหมด
-local function LoadPlayers()
-    ClearAllHealthESP()
-    for _,plr in ipairs(Players:GetPlayers()) do
-        AddHealthESP(plr)
+local function createHealthBar(player)
+    local char = player.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local head = char:FindFirstChild("Head")
+    if not humanoid or not head then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "HealthBarESP"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 65, 0, 10)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+
+    
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bg.BorderSizePixel = 1
+    bg.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    bg.Parent = billboard
+
+    
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, 0, 1, 0)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    bar.BorderSizePixel = 0
+    bar.Parent = bg
+
+    
+    local percentText = Instance.new("TextLabel")
+    percentText.Size = UDim2.new(1, 0, 1, 0)
+    percentText.BackgroundTransparency = 1
+    percentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    percentText.Font = Enum.Font.GothamBold
+    percentText.TextScaled = true
+    percentText.Text = "100%"
+    percentText.Parent = bg
+
+    billboard.Parent = head
+    ActiveBars[player] = billboard
+
+    -- อัปเดตแถบเลือด
+    local function update()
+        if not billboard.Parent then return end
+
+        local hp = humanoid.Health
+        local max = humanoid.MaxHealth
+        local percent = math.clamp(hp / max, 0, 1)
+
+        bar.Size = UDim2.new(percent, 0, 1, 0)
+        percentText.Text = tostring(math.floor(percent * 100)) .. "%"
+
+        if percent > 0.66 then
+            bar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        elseif percent > 0.33 then
+            bar.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        else
+            bar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        end
     end
+
+    humanoid.HealthChanged:Connect(update)
+    update()
 end
 
 
--- ===========================================
--- ใส่ Toggle เข้า ESPTab ที่คุณมีอยู่แล้ว
--- ===========================================
-    ESPTab:Toggle({
-    Title = "❤️ Health ESP",
-    Desc = "โชว์เลือดสีสด + ลดความสูงแทบ",
+ESPTab:Toggle({
+    Title = "Health ESP",
+    Desc = "มองเลือด",
     Default = false,
     Callback = function(state)
-        SimpleHealthESP_Enabled = state
+        HealthESP_Enabled = state
 
         if state then
-            LoadPlayers()
+            -- เปิด ESP
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    if player.Character then createHealthBar(player) end
 
-            Players.PlayerAdded:Connect(function(p)
-                task.wait(1)
-                AddHealthESP(p)
-            end)
-
-            Players.PlayerRemoving:Connect(function(p)
-                RemoveHealthESP(p)
-            end)
-
-            for _,p in ipairs(Players:GetPlayers()) do
-                p.CharacterAdded:Connect(function()
-                    task.wait(1.5)
-                    RemoveHealthESP(p)
-                    AddHealthESP(p)
-                end)
+                    player.CharacterAdded:Connect(function()
+                        if HealthESP_Enabled then
+                            task.wait(1)
+                            createHealthBar(player)
+                        end
+                    end)
+                end
             end
-
         else
-            ClearAllHealthESP()
+            
+            removeAll()
         end
     end
 })
-
-if myConfig then
-    myConfig:Register("SimpleHealthESP", ToggleHealth)
-end
-print("🔥 Final Simple Health ESP Loaded!")
-
