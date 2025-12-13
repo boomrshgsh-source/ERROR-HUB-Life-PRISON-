@@ -117,6 +117,22 @@ local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
 local runService = game:GetService("RunService")
 local camera = workspace.CurrentCamera
+local ContentProvider = game:GetService("ContentProvider")
+
+-- ตัวแปรของตรงesptab
+local HealthESP_Enabled = false
+local ActiveBars = {}
+local ESPManager = {
+    instances = {},
+    enabled = false
+}
+local ESPSettings = { Enabled = false }
+local BillboardCache = {}
+local ItemESP_UpdateConnections = {}
+local WeaponDB = {}
+local PreloadedImages = {}
+local RainbowStrokes = {}
+
 
 -- =========================
 -- Local Variables
@@ -846,11 +862,6 @@ end
 -- ESP Manager
 ------------------------------------------------------------------
 
-local ESPManager = {
-    instances = {},
-    enabled = false
-}
-
 function ESPManager:init()
     for _, player in ipairs(players:GetPlayers()) do
         if player ~= localPlayer then
@@ -899,30 +910,6 @@ function ESPManager:Disable()
 end
 
 ESPManager:init()
-
-
-local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
-
-ESPTab:Toggle({
-    Title = "ESP Box",
-    Desc = "กล่องสีเหลี่ยม",
-    Default = false,
-    Callback = function(state)
-        if state then
-            ESPManager:Enable()
-        else
-            ESPManager:Disable()
-        end
-    end
-})
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local HealthESP_Enabled = false
-local ActiveBars = {} -- เก็บ GUI ของแต่ละ player
-
-
 local function removeHealthBar(player)
     if ActiveBars[player] then
         ActiveBars[player]:Destroy()
@@ -979,8 +966,6 @@ local function createHealthBar(player)
 
     billboard.Parent = head
     ActiveBars[player] = billboard
-
-    -- อัปเดตแถบเลือด
     local function update()
         if not billboard.Parent then return end
 
@@ -1003,6 +988,248 @@ local function createHealthBar(player)
     humanoid.HealthChanged:Connect(update)
     update()
 end
+-------------
+-- ฟังชั่นดูของ
+-----------
+
+-- =====================================
+-- RARITY COLORS
+-- =====================================
+local RARITY_COLORS = {
+    ["Common"] = Color3.fromRGB(200, 200, 200),
+    ["Uncommon"] = Color3.fromRGB(86, 176, 62),
+    ["Rare"] = Color3.fromRGB(0, 162, 255),
+    ["Epic"] = Color3.fromRGB(170, 85, 255),
+    ["Legendary"] = Color3.fromRGB(255, 170, 0),
+    ["Omega"] = Color3.fromRGB(255, 75, 75)
+}
+
+-- =====================================
+-- GENERATE UNIQUE KEY
+-- =====================================
+local function generateUniqueKey(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local itemId = tool:GetAttribute("ItemId") or tool:GetAttribute("Id")
+    if itemId and itemId ~= "" then return "ITEMID_" .. tostring(itemId) end
+    return tool.Name
+end
+
+-- =====================================
+-- REGISTER ITEMS
+-- =====================================
+local function registerItems(folder)
+    for _, tool in ipairs(folder:GetDescendants()) do
+        if not tool:IsA("Tool") then continue end
+        local key = generateUniqueKey(tool)
+        if not key then continue end
+
+        local imageId = tool:GetAttribute("ImageId") or ""
+        local rarity = tool:GetAttribute("RarityName") or tool:GetAttribute("Rarity") or "Common"
+
+        WeaponDB[key] = {
+            Name = tool.Name,
+            Rarity = rarity,
+            ImageId = imageId,
+            Tool = tool
+        }
+
+        if imageId:match("^rbxassetid://%d+$") and not PreloadedImages[imageId] then
+            PreloadedImages[imageId] = true
+            task.spawn(function()
+                pcall(function()
+                    ContentProvider:PreloadAsync({imageId})
+                end)
+            end)
+        end
+    end
+end
+
+pcall(function()
+    registerItems(ReplicatedStorage)
+    registerItems(game:GetService("StarterPack"))
+end)
+
+-- =====================================
+-- GET TOOL INFO
+-- =====================================
+local function getWeaponInfo(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local key = generateUniqueKey(tool)
+    return WeaponDB[key]
+end
+
+-- =====================================
+-- RAINBOW STROKE UPDATE
+-- =====================================
+RunService.RenderStepped:Connect(function()
+    local time = tick() % 10
+    local offset = time / 10
+    for i, stroke in ipairs(RainbowStrokes) do
+        local hue = (i/#RainbowStrokes + offset) % 1
+        stroke.Color = Color3.fromHSV(hue, 1, 1)
+    end
+end)
+
+-- =====================================
+-- CREATE BILLBOARD ESP
+-- =====================================
+local function createBillboardForPlayer(player)
+    if player == LocalPlayer or BillboardCache[player] then return end
+
+    local billboard, container
+    local connections = {}
+
+    local function updateESP()
+        if not ESPSettings.Enabled or not billboard or not billboard.Parent then return end
+        container:ClearAllChildren()
+
+        local toolsList = {}
+
+        local function scan(folder)
+            if not folder then return end
+            for _, tool in ipairs(folder:GetChildren()) do
+                if tool:IsA("Tool") then
+                    local info = getWeaponInfo(tool)
+                    if info and info.ImageId:match("^rbxassetid://%d+$") then
+                        table.insert(toolsList, info)
+                    end
+                end
+            end
+        end
+
+        -- ตรวจสอบ 3 ที่: Character, Backpack, StarterGear, StarterPack
+        if player.Character then scan(player.Character) end
+        for _, folderName in ipairs({"Backpack","StarterGear","StarterPack"}) do
+            local folder = player:FindFirstChild(folderName)
+            if folder then scan(folder) end
+        end
+
+        for i, info in ipairs(toolsList) do
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(0,35,0,35)
+            bg.BackgroundColor3 = RARITY_COLORS[info.Rarity] or Color3.fromRGB(200,200,200)
+            bg.BackgroundTransparency = 0
+            bg.Parent = container
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0,6)
+            corner.Parent = bg
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 2
+            stroke.Parent = bg
+            table.insert(RainbowStrokes, stroke)
+
+            local img = Instance.new("ImageLabel")
+            img.Size = UDim2.new(1,-6,1,-6)
+            img.Position = UDim2.new(0,3,0,3)
+            img.BackgroundTransparency = 1
+            img.Image = info.ImageId
+            img.ScaleType = Enum.ScaleType.Fit
+            img.Parent = bg
+        end
+    end
+
+    local function setupBillboard()
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        if BillboardCache[player] then BillboardCache[player]:Destroy() end
+        for _, conn in pairs(connections) do if conn.Connected then conn:Disconnect() end end
+        connections = {}
+
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = "ItemESP"
+        billboard.Adornee = hrp
+        billboard.Size = UDim2.new(0,280,0,40)
+        billboard.StudsOffset = Vector3.new(0,-6.5,0)
+        billboard.AlwaysOnTop = true
+        billboard.LightInfluence = 0
+        billboard.Enabled = ESPSettings.Enabled
+        billboard.Parent = hrp
+
+        container = Instance.new("Frame")
+        container.Size = UDim2.new(1,0,1,0)
+        container.BackgroundTransparency = 1
+        container.Parent = billboard
+
+        BillboardCache[player] = billboard
+        updateESP()
+
+        for _, folderName in ipairs({"Backpack","StarterGear","StarterPack"}) do
+            local folder = player:FindFirstChild(folderName)
+            if folder then
+                table.insert(connections, folder.ChildAdded:Connect(updateESP))
+                table.insert(connections, folder.ChildRemoved:Connect(updateESP))
+            end
+        end
+
+        if char then
+            table.insert(connections, char.ChildAdded:Connect(function(child)
+                if child:IsA("Tool") then task.defer(updateESP) end
+            end))
+            table.insert(connections, char.ChildRemoved:Connect(function(child)
+                if child:IsA("Tool") then task.defer(updateESP) end
+            end))
+        end
+    end
+
+    if player.Character then task.spawn(setupBillboard) end
+    table.insert(connections, player.CharacterAdded:Connect(function() task.wait(1); setupBillboard() end))
+    ItemESP_UpdateConnections[player] = connections
+end
+
+-- =====================================
+-- UPDATE ESP VISIBILITY
+-- =====================================
+local function updateAllESPVisibility()
+    for player, billboard in pairs(BillboardCache) do
+        if billboard then
+            billboard.Enabled = ESPSettings.Enabled
+        end
+    end
+end
+
+-- =====================================
+-- CREATE ESP FOR EXISTING PLAYERS
+-- =====================================
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end
+
+-- =====================================
+-- PLAYER ADDED / REMOVED
+-- =====================================
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if BillboardCache[p] then BillboardCache[p]:Destroy(); BillboardCache[p]=nil end
+    if ItemESP_UpdateConnections[p] then
+        for _, conn in pairs(ItemESP_UpdateConnections[p]) do if conn.Connected then conn:Disconnect() end end
+        ItemESP_UpdateConnections[p] = nil
+    end
+end)
+
+
+
+local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
+
+ESPTab:Toggle({
+    Title = "ESP Box",
+    Desc = "กล่องสีเหลี่ยม",
+    Default = false,
+    Callback = function(state)
+        if state then
+            ESPManager:Enable()
+        else
+            ESPManager:Disable()
+        end
+    end
+})
+
 
 
 ESPTab:Toggle({
@@ -1011,9 +1238,7 @@ ESPTab:Toggle({
     Default = false,
     Callback = function(state)
         HealthESP_Enabled = state
-
         if state then
-            -- เปิด ESP
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer then
                     if player.Character then createHealthBar(player) end
@@ -1026,9 +1251,19 @@ ESPTab:Toggle({
                     end)
                 end
             end
-        else
-            
+        else            
             removeAll()
         end
     end
 })
+
+ESPTab:Toggle({
+    Title = "ESP Inventory",
+    Desc = "มองของในตัว",
+    Default = false,
+    Callback = function(state)
+        ESPSettings.Enabled = state
+        updateAllESPVisibility()
+    end
+})
+
