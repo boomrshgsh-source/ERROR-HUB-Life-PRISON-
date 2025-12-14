@@ -133,6 +133,16 @@ local WeaponDB = {}
 local PreloadedImages = {}
 local RainbowStrokes = {}
 
+-----------
+--ตัวแปรคอมแบด
+------------
+local SilentAimEnabled = false
+local ShowFOV = true
+local FOV = 120
+local SilentFOVCircle
+local tracerLine, targetDot
+
+
 
 -- =========================
 -- Local Variables
@@ -165,11 +175,6 @@ local Window = WindUI:CreateWindow({
 local ConfigManager = Window.ConfigManager
 local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
 
-local SilentAimEnabled = false
-local ShowFOV = true
-local FOV = 120
-local SilentFOVCircle
-local tracerLine, targetDot
 
 local function isPlayerExcluded(playerName)
     local lowerPlayerName = string.lower(playerName)
@@ -333,7 +338,7 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
 end
 
 -- =========================
--- Remote Hook ยิงจริง (เพิ่มเอฟเฟคโดยไม่มีปุ่ม)
+-- Remote Hook 
 -- =========================
 local Remote
 pcall(function()
@@ -359,7 +364,7 @@ if Remote and Remote.FireServer then
                         local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
 
                         -- =========================
-                        -- เอฟเฟคกระสุน (เส้นสีชมพู) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคกระสุน สีชมพู
                         -- =========================
                         if origin then
                             pcall(function()
@@ -377,7 +382,7 @@ if Remote and Remote.FireServer then
                         end
 
                         -- =========================
-                        -- เอฟเฟคเมื่อยิงโดน (สีแดง) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคตอนยิงโดน สีแดง
                         -- =========================
                         spawn(function()
                             wait(0.1)
@@ -501,212 +506,10 @@ LocalPlayer.CharacterAdded:Connect(function()
     CreateDrawingObjects()
 end)
 
--- =========================
--- UI Creation
--- =========================
-local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
-
-local SilentToggle = Tab:Toggle({
-    Title = "Silent Aim | wallbang ",
-    Desc = "ล็อคหัวกับยิงทะลุ",
-    Default = false,
-    Callback = function(state)
-        SilentAimEnabled = state
-    end
-})
-myConfig:Register("SilentAim", SilentToggle)
-
-local FOVSlider = Tab:Slider({
-    Title = "FOV: ",
-    Step = 1,
-    Value = {Min = 20, Max = 750, Default = FOV},
-    Callback = function(value)
-        FOV = tonumber(value) or 120
-        if SilentFOVCircle then
-            if isMobile then
-                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
-            else
-                SilentFOVCircle.Radius = FOV
-            end
-        end
-    end
-})
-myConfig:Register("FOVRadius", FOVSlider)
-
-local ShowFOVToggle = Tab:Toggle({
-    Title = "Show FOV",
-    Desc = "แสดงวงFOV",
-    Default = ShowFOV,
-    Callback = function(state)
-        ShowFOV = state
-        if SilentFOVCircle then
-            SilentFOVCircle.Visible = state and SilentAimEnabled
-        end
-    end
-})
-myConfig:Register("ShowFOV", ShowFOVToggle)
-
-Tab:Divider()
-
-local FriendsInput = Tab:Input({
-    Title = "Safe Friend List",
-    Desc = "Enter Player Name",
-    Value = "",
-    InputIcon = "shield-check",
-    Type = "Input",
-    Placeholder = "",
-    Callback = function(input)
-        excludedPlayerNames = {}
-        for name in string.gmatch(input, "%S+") do
-            table.insert(excludedPlayerNames, name)
-        end
-        for _, player in pairs(Players:GetPlayers()) do
-            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
-                local nameText = espPlayers[player].drawings[1]
-                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
-            end
-        end
-    end
-})
-myConfig:Register("FriendsList", FriendsInput)
-
-Players.PlayerAdded:Connect(UpdateExcludedHighlights)
-Players.PlayerRemoving:Connect(function(player)
-    if excludedPlayersUI[player] then
-        excludedPlayersUI[player]:Destroy()
-        excludedPlayersUI[player] = nil
-    end
-end)
-
-
-local PlayerTab = Window:Tab({Title = "Player", Icon = "🏃"})
-
-local Net = {}
-function Net.send(...)
-    local args = {...}
-    CounterTable.event = CounterTable.event + 1
-    pcall(
-        function()
-            Remotes.Send:FireServer(CounterTable.event, unpack(args))
-        end
-    )
-end
-
-local AutoSprintToggle =
-    PlayerTab:Toggle(
-    {
-        Title = "Infinite Stamina",
-        Default = false,
-        Callback = function(state)
-            AutoSprintEnabled = state
-            if AutoSprintEnabled then
-                -- Override stamina update to prevent depletion
-                local success, SprintModule =
-                    pcall(
-                    function()
-                        return require(ReplicatedStorage.Modules.Game.Sprint)
-                    end
-                )
-                if success and SprintModule then
-                    local consume_stamina = SprintModule.consume_stamina
-                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
-                    if SprintBar then
-                        local Old = SprintBar.update
-                        SprintBar.update = function(...)
-                            return Old(
-                                function()
-                                    return 1
-                                end
-                            ) -- Keep stamina at full
-                        end
-                        -- Store original function for restoration
-                        getgenv().OriginalSprintUpdate = Old
-                        -- Start auto sprint loop
-                        getgenv().AutoSprintLoop =
-                            task.spawn(
-                            function()
-                                while AutoSprintEnabled do
-                                    pcall(
-                                        function()
-                                            Net.send("set_sprinting_1", true)
-                                            task.wait(0.5)
-                                            Net.send("set_sprinting_1", false)
-                                        end
-                                    )
-                                    task.wait(0.1) -- Prevent excessive CPU usage
-                                end
-                                -- Ensure sprint is disabled when loop ends
-                                pcall(
-                                    function()
-                                        Net.send("set_sprinting_1", false)
-                                    end
-                                )
-                            end
-                        )
-                        if WindUI then
-                            WindUI:Notify(
-                                {
-                                    Title = "✅ INF STAMINA",
-                                    Description = "Infinite Stamina ทำงานแล้ว",
-                                    Duration = 3
-                                }
-                            )
-                        end
-                    else
-                        warn("❌ ไม่พบ SprintBar!")
-                        AutoSprintEnabled = false
-                        AutoSprintToggle:Set(false)
-                    end
-                else
-                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
-                    AutoSprintEnabled = false
-                    AutoSprintToggle:Set(false)
-                end
-            else
-                -- Stop sprint loop and restore stamina behavior
-                if getgenv().AutoSprintLoop then
-                    task.cancel(getgenv().AutoSprintLoop)
-                    getgenv().AutoSprintLoop = nil
-                end
-                -- Ensure sprint is disabled
-                pcall(
-                    function()
-                        Net.send("set_sprinting_1", false)
-                    end
-                )
-                -- Restore original stamina update function
-                local success, SprintModule =
-                    pcall(
-                    function()
-                        return require(ReplicatedStorage.Modules.Game.Sprint)
-                    end
-                )
-                if success and SprintModule then
-                    local consume_stamina = SprintModule.consume_stamina
-                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
-                    if SprintBar and getgenv().OriginalSprintUpdate then
-                        SprintBar.update = getgenv().OriginalSprintUpdate
-                        getgenv().OriginalSprintUpdate = nil
-                    end
-                end
-                if WindUI then
-                    WindUI:Notify(
-                        {
-                            Title = "❌ Infinite Stamina Disabled",
-                            Description = "Infinite Stamina ถูกปิดแล้ว",
-                            Duration = 3
-                        }
-                    )
-                end
-            end
-        end
-    }
-)
-myConfig:Register("AutoSprint", AutoSprintToggle)
 
 
 ------------------------------------------------------------------
--- 3D BOX ESP (ทั้งหมดรวมในไฟล์เดียว)
+-- 3D BOX ESP 
 ------------------------------------------------------------------
 
 
@@ -1215,6 +1018,211 @@ end)
 
 
 
+
+-- ===========
+-- พวกปุ่มต่างๆ -
+-- ===========
+
+local Tab = Window:Tab({Title = "☄️COMBAT", Icon = ""})
+
+local SilentToggle = Tab:Toggle({
+    Title = "Silent Aim | wallbang ",
+    Desc = "ล็อคหัวกับยิงทะลุ",
+    Default = false,
+    Callback = function(state)
+        SilentAimEnabled = state
+    end
+})
+myConfig:Register("SilentAim", SilentToggle)
+
+local FOVSlider = Tab:Slider({
+    Title = "FOV: ",
+    Step = 1,
+    Value = {Min = 20, Max = 750, Default = FOV},
+    Callback = function(value)
+        FOV = tonumber(value) or 120
+        if SilentFOVCircle then
+            if isMobile then
+                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+            else
+                SilentFOVCircle.Radius = FOV
+            end
+        end
+    end
+})
+myConfig:Register("FOVRadius", FOVSlider)
+
+local ShowFOVToggle = Tab:Toggle({
+    Title = "Show FOV",
+    Desc = "แสดงวงFOV",
+    Default = ShowFOV,
+    Callback = function(state)
+        ShowFOV = state
+        if SilentFOVCircle then
+            SilentFOVCircle.Visible = state and SilentAimEnabled
+        end
+    end
+})
+myConfig:Register("ShowFOV", ShowFOVToggle)
+
+Tab:Divider()
+
+local FriendsInput = Tab:Input({
+    Title = "Safe Friend List",
+    Desc = "Enter Player Name",
+    Value = "",
+    InputIcon = "shield-check",
+    Type = "Input",
+    Placeholder = "",
+    Callback = function(input)
+        excludedPlayerNames = {}
+        for name in string.gmatch(input, "%S+") do
+            table.insert(excludedPlayerNames, name)
+        end
+        for _, player in pairs(Players:GetPlayers()) do
+            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
+                local nameText = espPlayers[player].drawings[1]
+                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
+            end
+        end
+    end
+})
+myConfig:Register("FriendsList", FriendsInput)
+
+Players.PlayerAdded:Connect(UpdateExcludedHighlights)
+Players.PlayerRemoving:Connect(function(player)
+    if excludedPlayersUI[player] then
+        excludedPlayersUI[player]:Destroy()
+        excludedPlayersUI[player] = nil
+    end
+end)
+
+local PlayerTab = Window:Tab({Title = "☄️Player", Icon = ""})
+
+local Net = {}
+function Net.send(...)
+    local args = {...}
+    CounterTable.event = CounterTable.event + 1
+    pcall(
+        function()
+            Remotes.Send:FireServer(CounterTable.event, unpack(args))
+        end
+    )
+end
+
+local AutoSprintToggle =
+    PlayerTab:Toggle(
+    {
+        Title = "Infinite Stamina",
+        Default = false,
+        Callback = function(state)
+            AutoSprintEnabled = state
+            if AutoSprintEnabled then
+                -- Override stamina update to prevent depletion
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar then
+                        local Old = SprintBar.update
+                        SprintBar.update = function(...)
+                            return Old(
+                                function()
+                                    return 1
+                                end
+                            ) -- Keep stamina at full
+                        end
+                        -- Store original function for restoration
+                        getgenv().OriginalSprintUpdate = Old
+                        -- Start auto sprint loop
+                        getgenv().AutoSprintLoop =
+                            task.spawn(
+                            function()
+                                while AutoSprintEnabled do
+                                    pcall(
+                                        function()
+                                            Net.send("set_sprinting_1", true)
+                                            task.wait(0.5)
+                                            Net.send("set_sprinting_1", false)
+                                        end
+                                    )
+                                    task.wait(0.1) -- Prevent excessive CPU usage
+                                end
+                                -- Ensure sprint is disabled when loop ends
+                                pcall(
+                                    function()
+                                        Net.send("set_sprinting_1", false)
+                                    end
+                                )
+                            end
+                        )
+                        if WindUI then
+                            WindUI:Notify(
+                                {
+                                    Title = "✅ INF STAMINA",
+                                    Description = "Infinite Stamina ทำงานแล้ว",
+                                    Duration = 3
+                                }
+                            )
+                        end
+                    else
+                        warn("❌ ไม่พบ SprintBar!")
+                        AutoSprintEnabled = false
+                        AutoSprintToggle:Set(false)
+                    end
+                else
+                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
+                    AutoSprintEnabled = false
+                    AutoSprintToggle:Set(false)
+                end
+            else
+                -- Stop sprint loop and restore stamina behavior
+                if getgenv().AutoSprintLoop then
+                    task.cancel(getgenv().AutoSprintLoop)
+                    getgenv().AutoSprintLoop = nil
+                end
+                -- Ensure sprint is disabled
+                pcall(
+                    function()
+                        Net.send("set_sprinting_1", false)
+                    end
+                )
+                -- Restore original stamina update function
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar and getgenv().OriginalSprintUpdate then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                        getgenv().OriginalSprintUpdate = nil
+                    end
+                end
+                if WindUI then
+                    WindUI:Notify(
+                        {
+                            Title = "❌ Infinite Stamina Disabled",
+                            Description = "Infinite Stamina ถูกปิดแล้ว",
+                            Duration = 3
+                        }
+                    )
+                end
+            end
+        end
+    }
+)
+myConfig:Register("AutoSprint", AutoSprintToggle)
+
+
 local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
 
 ESPTab:Toggle({
@@ -1266,4 +1274,5 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
