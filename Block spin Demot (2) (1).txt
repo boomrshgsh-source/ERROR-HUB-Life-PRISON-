@@ -1,0 +1,1269 @@
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1448363204026826752/nkSpnXNfE2VuTUPhwfwdk0S2huvwGMqwL7pCuVeujHYAPBvcj_-EL6cIn-OdD9HCJNFq"
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local Marketplace = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+
+local plr = Players.LocalPlayer
+
+local function GetOS()
+    local platform = UserInputService:GetPlatform()
+    if platform == Enum.Platform.Windows then
+        return "Windows 💻"
+    elseif platform == Enum.Platform.IOS then
+        return "iOS 🍎"
+    elseif platform == Enum.Platform.Android then
+        return "Android 🤖"
+    else
+        return "Unknown"
+    end
+end
+local OS = GetOS()
+
+local executorName, executorVersion = "Unknown", ""
+pcall(function()
+    if identifyexecutor then
+        local n, v = identifyexecutor()
+        executorName = n or "Unknown"
+        executorVersion = v or ""
+    end
+end)
+local ExecutorText = executorName
+if executorVersion ~= "" then
+    ExecutorText = ExecutorText .. " | " .. executorVersion
+end
+
+local avatarApi = "https://thumbnails.roblox.com/v1/users/avatar?userIds=" ..
+    plr.UserId .. "&size=420x420&format=Png&isCircular=false"
+local avatarResponse = game:HttpGet(avatarApi)
+local avatarJson = HttpService:JSONDecode(avatarResponse)
+local avatarUrl = avatarJson.data[1].imageUrl or ""
+
+local mapApi = "https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" ..
+    game.PlaceId .. "&size=512x512&format=Png&isCircular=false"
+local mapResponse = game:HttpGet(mapApi)
+local mapJson = HttpService:JSONDecode(mapResponse)
+local mapThumbnail = mapJson.data[1].imageUrl or ""
+
+local placeId = game.PlaceId
+local placeName = Marketplace:GetProductInfo(placeId).Name
+
+local placeLink = "https://www.roblox.com/games/"..placeId
+
+local function GetThaiTimestamp()
+    local time = os.date("!*t")
+    time.hour = (time.hour + 7) % 24
+    return string.format("%02d-%02d-%02d %02d:%02d:%02d", time.day, time.month, time.year, time.hour, time.min, time.sec)
+end
+local timestamp = GetThaiTimestamp()
+
+local color = 0
+if OS == "Windows 💻" then
+    color = 3447003
+elseif OS == "Android 🤖" then
+    color = 3066993
+elseif OS == "iOS 🍎" then
+    color = 15158332
+else
+    color = 0
+end
+
+local data = {
+    username = "ERROR HUB",
+    embeds = {{
+        title = " Block spin",
+        color = color,
+        thumbnail = { url = avatarUrl },
+        image = { url = mapThumbnail },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        fields = {
+            { name = "🌠 คนใช้", value = plr.Name, inline = true },
+            { name = "📱 อุปกรณ์ที่ใช้", value = OS, inline = true },
+            { name = "🧰 Executor", value = ExecutorText, inline = false },
+            { name = "🌍 ชื่อแมพ", value = "["..placeName.."]("..placeLink..")", inline = false },
+            { name = "🆔 JobId", value = tostring(game.JobId), inline = false },
+            { name = "🕒 เวลาตอนรัน", value = timestamp, inline = false }
+        }
+    }}
+}
+
+local body = HttpService:JSONEncode(data)
+
+request({
+    Url = WEBHOOK_URL,
+    Method = "POST",
+    Headers = { ["Content-Type"] = "application/json" },
+    Body = body
+})
+
+
+
+
+
+
+-- =========================
+-- Services
+-- =========================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local HttpService = game:GetService("HttpService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+local runService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local ContentProvider = game:GetService("ContentProvider")
+
+-- ตัวแปรของตรงesptab
+local HealthESP_Enabled = false
+local ActiveBars = {}
+local ESPManager = {
+    instances = {},
+    enabled = false
+}
+local ESPSettings = { Enabled = false }
+local BillboardCache = {}
+local ItemESP_UpdateConnections = {}
+local WeaponDB = {}
+local PreloadedImages = {}
+local RainbowStrokes = {}
+
+
+-- =========================
+-- Local Variables
+-- =========================
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local excludedPlayerNames = {"MithnoFs_49"}
+local excludedPlayersUI = {}
+-- =========================
+-- Load WindUI
+-- =========================
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- =========================
+-- Window UI
+-- =========================
+local Window = WindUI:CreateWindow({
+    Title = "ERROR HUB | Free | [ Demo ]",
+    Icon = "",
+    Author = "",
+    Folder = "ERROR HUB",
+    Size = UDim2.fromOffset(450, 330),
+    Theme = "Dark",
+    Transparent = true,
+    Resizable = true,
+})
+
+
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
+
+local SilentAimEnabled = false
+local ShowFOV = true
+local FOV = 120
+local SilentFOVCircle
+local tracerLine, targetDot
+
+local function isPlayerExcluded(playerName)
+    local lowerPlayerName = string.lower(playerName)
+    for _, excludedName in ipairs(excludedPlayerNames) do
+        if excludedName ~= "" and string.find(lowerPlayerName, string.lower(excludedName)) then
+            return true
+        end
+    end
+    return false
+end
+
+local function UpdateExcludedHighlights()
+    for _, player in pairs(Players:GetPlayers()) do
+        if isPlayerExcluded(player.Name) and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if not excludedPlayersUI[player] then
+                local highlight = Instance.new("Highlight")
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+                highlight.FillTransparency = 0.3
+                highlight.OutlineTransparency = 0
+                highlight.Parent = player.Character
+                excludedPlayersUI[player] = highlight
+            end
+        else
+            if excludedPlayersUI[player] then
+                excludedPlayersUI[player]:Destroy()
+                excludedPlayersUI[player] = nil
+            end
+        end
+    end
+end
+
+-- =========================
+-- FOV Circle Creation
+-- =========================
+local function CreateFOVCircle()
+    if not isMobile then
+        if SilentFOVCircle then SilentFOVCircle:Remove() end
+        SilentFOVCircle = Drawing.new("Circle")
+        SilentFOVCircle.Color = Color3.fromRGB(255, 255, 255)
+        SilentFOVCircle.Thickness = 2
+        SilentFOVCircle.NumSides = 64
+        SilentFOVCircle.Filled = false
+        SilentFOVCircle.Transparency = 0.8
+        SilentFOVCircle.Radius = FOV
+        SilentFOVCircle.Visible = SilentAimEnabled and ShowFOV
+    else
+        if SilentFOVCircle and SilentFOVCircle.Parent then SilentFOVCircle.Parent:Destroy() end
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "MobileFOV"
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        
+        SilentFOVCircle = Instance.new("Frame")
+        SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+        SilentFOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+        SilentFOVCircle.Position = UDim2.fromScale(0.5, 0.5)
+        SilentFOVCircle.BackgroundTransparency = 1
+        
+        local circleUI = Instance.new("UICorner")
+        circleUI.CornerRadius = UDim.new(1, 0)
+        circleUI.Parent = SilentFOVCircle
+        
+        local border = Instance.new("UIStroke")
+        border.Color = Color3.fromRGB(255, 255, 255)
+        border.Thickness = 2
+        border.Transparency = 0.2
+        border.Parent = SilentFOVCircle
+        
+        SilentFOVCircle.Parent = ScreenGui
+    end
+end
+
+-- =========================
+-- Drawing Objects
+-- =========================
+local function CreateDrawingObjects()
+    if tracerLine then tracerLine:Remove() end
+    if targetDot then targetDot:Remove() end
+    
+    tracerLine = Drawing.new("Line")
+    tracerLine.Color = Color3.fromRGB(255, 50, 50)
+    tracerLine.Thickness = 1
+    tracerLine.Transparency = 1
+    tracerLine.Visible = false
+    
+    targetDot = Drawing.new("Circle")
+    targetDot.Color = Color3.fromRGB(255, 50, 50)
+    targetDot.Thickness = 2
+    targetDot.NumSides = 12
+    targetDot.Radius = 4
+    targetDot.Filled = true
+    targetDot.Transparency = 0.7
+    targetDot.Visible = false
+end
+
+-- =========================
+-- Target Selection (ลบฟังก์ชันตีรอบๆ/ในรถ)
+-- =========================
+local function GetClosestTarget()
+    local closest = nil
+    local shortestDistance = FOV
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            
+            if head and humanoid and humanoid.Health > 0 and hrp then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local screenVector = Vector2.new(screenPos.X, screenPos.Y)
+                    local distanceFromCenter = (screenVector - center).Magnitude
+                    
+                    if distanceFromCenter <= FOV and not isPlayerExcluded(player.Name) then
+                        if distanceFromCenter < shortestDistance then
+                            shortestDistance = distanceFromCenter
+                            closest = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- =========================
+-- Ballistic Prediction Functions
+-- =========================
+local function solveQuadratic(A, B, C)
+    local discriminant = B^2 - 4*A*C
+    if discriminant < 0 then return nil, nil end
+    local sqrtDisc = math.sqrt(discriminant)
+    return (-B - sqrtDisc) / (2*A), (-B + sqrtDisc) / (2*A)
+end
+
+local function getBallisticFlightTime(direction, gravity, projectileSpeed)
+    local root1, root2 = solveQuadratic(
+        gravity:Dot(gravity) / 3.5,
+        gravity:Dot(direction) - projectileSpeed^2,
+        direction:Dot(direction)
+    )
+    if root1 and root2 then
+        if root1 > 0 and root1 < root2 then return math.sqrt(root1) end
+        if root2 > 0 and root2 < root1 then return math.sqrt(root2) end
+    end
+    return 0
+end
+
+local function projectileDrop(origin, target, projectileSpeed, acceleration)
+    local gravity = Vector3.new(0, -acceleration * 2, 0)
+    local time = getBallisticFlightTime(target - origin, gravity, projectileSpeed)
+    return -0.001 * gravity * time^2
+end
+
+local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity)
+    local t = travelTime or 0.15 -- ลดการคาดการณ์ล่วงหน้า
+    return targetPos + (approxVel * t) + (targetPos - origin).Unit * t + projectileDrop(origin, targetPos, 1000, gravity or 196.2)
+end
+
+-- =========================
+-- Remote Hook ยิงจริง (เพิ่มเอฟเฟคโดยไม่มีปุ่ม)
+-- =========================
+local Remote
+pcall(function()
+    Remote = ReplicatedStorage:WaitForChild("Remotes", 5):WaitForChild("Send", 5)
+end)
+
+local oldFire
+if Remote and Remote.FireServer then
+    local ok, res = pcall(function()
+        oldFire = hookfunction(Remote.FireServer, function(self, ...)
+            if self ~= Remote then return oldFire(self, ...) end
+            local args = {...}
+
+            if SilentAimEnabled and args[2] == "shoot_gun" then
+                local target = GetClosestTarget()
+                if target and target.Character then
+                    local head = target.Character:FindFirstChild("Head")
+                    local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = target.Character:FindFirstChild("Humanoid")
+
+                    if head and humanoid and humanoid.Health > 0 and hrp then
+                        local origin = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position
+                        local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
+
+                        -- =========================
+                        -- เอฟเฟคกระสุน (เส้นสีชมพู) - เปิดตลอดไม่มีปุ่ม
+                        -- =========================
+                        if origin then
+                            pcall(function()
+                                local part = Instance.new("Part")
+                                part.Anchored = true
+                                part.CanCollide = false
+                                part.Size = Vector3.new(0.15, 0.15, (aimPos - origin).Magnitude)
+                                part.CFrame = CFrame.new(origin, aimPos) * CFrame.new(0, 0, -part.Size.Z / 2)
+                                part.Material = Enum.Material.Neon
+                                part.Transparency = 0.25
+                                part.Color = Color3.fromRGB(255, 0, 255) -- ชมพู neon
+                                part.Parent = Workspace
+                                Debris:AddItem(part, 4)
+                            end)
+                        end
+
+                        -- =========================
+                        -- เอฟเฟคเมื่อยิงโดน (สีแดง) - เปิดตลอดไม่มีปุ่ม
+                        -- =========================
+                        spawn(function()
+                            wait(0.1)
+                            if humanoid and humanoid.Parent and humanoid.Health > 0 then
+                                local character = target.Character
+                                if character then
+                                    for _, part in ipairs(character:GetDescendants()) do
+                                        if part:IsA("BasePart") then
+                                            local box = Instance.new("Part")
+                                            box.Size = part.Size + Vector3.new(0.05, 0.05, 0.05)
+                                            box.CFrame = part.CFrame
+                                            box.Anchored = true
+                                            box.CanCollide = false
+                                            box.Material = Enum.Material.Neon
+                                            box.Color = Color3.fromRGB(255, 0, 0) -- แดง neon
+                                            box.Transparency = 0.5
+                                            box.Parent = Workspace
+                                            local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
+                                            TweenService:Create(box, tweenInfo, {Transparency = 1}):Play()
+                                            Debris:AddItem(box, 2)
+                                        end
+                                    end
+                                end
+                            end
+                        end)
+
+                        args[4] = CFrame.new(
+                            1/0, 1/0, 1/0,
+                            0/0, 0/0, 0/0,
+                            0/0, 0/0, 0/0,
+                            0/0, 0/0, 0/0
+                        )
+                        args[5] = {
+                            [1] = {
+                                [1] = {
+                                    ["Instance"] = head,
+                                    ["Position"] = aimPos
+                                }
+                            }
+                        }
+                    end
+                end
+            end
+            return oldFire(self, unpack(args))
+        end)
+    end)
+    if not ok then
+        warn("Warning: Failed to hook Remote.FireServer for ballistic aim")
+    end
+end
+
+-- =========================
+-- Main Render Loop
+-- =========================
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        
+        if SilentFOVCircle then
+            if not isMobile then
+                SilentFOVCircle.Position = center
+                SilentFOVCircle.Radius = FOV
+            end
+            SilentFOVCircle.Visible = ShowFOV and SilentAimEnabled
+        end
+        
+        UpdateExcludedHighlights()
+        
+        if not SilentAimEnabled then
+            if tracerLine then tracerLine.Visible = false end
+            if targetDot then targetDot.Visible = false end
+            return
+        end
+        
+        local target = GetClosestTarget()
+        if target and target.Character then
+            local head = target.Character:FindFirstChild("Head")
+            local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = target.Character:FindFirstChild("Humanoid")
+            
+            if head and humanoid and humanoid.Health > 0 and hrp then
+                local origin = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position
+                local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
+                local screenPos, onScreen = Camera:WorldToViewportPoint(aimPos)
+                
+                if onScreen then
+                    if tracerLine then
+                        tracerLine.Visible = true
+                        tracerLine.From = center
+                        tracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                        tracerLine.Color = Color3.fromRGB(255, 50, 50)
+                    end
+                    if targetDot then
+                        targetDot.Visible = true
+                        targetDot.Position = Vector2.new(screenPos.X, screenPos.Y)
+                    end
+                else
+                    if tracerLine then tracerLine.Visible = false end
+                    if targetDot then targetDot.Visible = false end
+                end
+            else
+                if tracerLine then tracerLine.Visible = false end
+                if targetDot then targetDot.Visible = false end
+            end
+        else
+            if tracerLine then tracerLine.Visible = false end
+            if targetDot then targetDot.Visible = false end
+        end
+    end)
+end)
+
+-- =========================
+-- Initial Setup
+-- =========================
+CreateFOVCircle()
+CreateDrawingObjects()
+
+LocalPlayer.CharacterAdded:Connect(function()
+    wait(0.1)
+    CreateFOVCircle()
+    CreateDrawingObjects()
+end)
+
+-- =========================
+-- UI Creation
+-- =========================
+local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
+
+local SilentToggle = Tab:Toggle({
+    Title = "Silent Aim | wallbang ",
+    Desc = "ล็อคหัวกับยิงทะลุ",
+    Default = false,
+    Callback = function(state)
+        SilentAimEnabled = state
+    end
+})
+myConfig:Register("SilentAim", SilentToggle)
+
+local FOVSlider = Tab:Slider({
+    Title = "FOV: ",
+    Step = 1,
+    Value = {Min = 20, Max = 750, Default = FOV},
+    Callback = function(value)
+        FOV = tonumber(value) or 120
+        if SilentFOVCircle then
+            if isMobile then
+                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+            else
+                SilentFOVCircle.Radius = FOV
+            end
+        end
+    end
+})
+myConfig:Register("FOVRadius", FOVSlider)
+
+local ShowFOVToggle = Tab:Toggle({
+    Title = "Show FOV",
+    Desc = "แสดงวงFOV",
+    Default = ShowFOV,
+    Callback = function(state)
+        ShowFOV = state
+        if SilentFOVCircle then
+            SilentFOVCircle.Visible = state and SilentAimEnabled
+        end
+    end
+})
+myConfig:Register("ShowFOV", ShowFOVToggle)
+
+Tab:Divider()
+
+local FriendsInput = Tab:Input({
+    Title = "Safe Friend List",
+    Desc = "Enter Player Name",
+    Value = "",
+    InputIcon = "shield-check",
+    Type = "Input",
+    Placeholder = "",
+    Callback = function(input)
+        excludedPlayerNames = {}
+        for name in string.gmatch(input, "%S+") do
+            table.insert(excludedPlayerNames, name)
+        end
+        for _, player in pairs(Players:GetPlayers()) do
+            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
+                local nameText = espPlayers[player].drawings[1]
+                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
+            end
+        end
+    end
+})
+myConfig:Register("FriendsList", FriendsInput)
+
+Players.PlayerAdded:Connect(UpdateExcludedHighlights)
+Players.PlayerRemoving:Connect(function(player)
+    if excludedPlayersUI[player] then
+        excludedPlayersUI[player]:Destroy()
+        excludedPlayersUI[player] = nil
+    end
+end)
+
+
+local PlayerTab = Window:Tab({Title = "Player", Icon = "🏃"})
+
+local Net = {}
+function Net.send(...)
+    local args = {...}
+    CounterTable.event = CounterTable.event + 1
+    pcall(
+        function()
+            Remotes.Send:FireServer(CounterTable.event, unpack(args))
+        end
+    )
+end
+
+local AutoSprintToggle =
+    PlayerTab:Toggle(
+    {
+        Title = "Infinite Stamina",
+        Default = false,
+        Callback = function(state)
+            AutoSprintEnabled = state
+            if AutoSprintEnabled then
+                -- Override stamina update to prevent depletion
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar then
+                        local Old = SprintBar.update
+                        SprintBar.update = function(...)
+                            return Old(
+                                function()
+                                    return 1
+                                end
+                            ) -- Keep stamina at full
+                        end
+                        -- Store original function for restoration
+                        getgenv().OriginalSprintUpdate = Old
+                        -- Start auto sprint loop
+                        getgenv().AutoSprintLoop =
+                            task.spawn(
+                            function()
+                                while AutoSprintEnabled do
+                                    pcall(
+                                        function()
+                                            Net.send("set_sprinting_1", true)
+                                            task.wait(0.5)
+                                            Net.send("set_sprinting_1", false)
+                                        end
+                                    )
+                                    task.wait(0.1) -- Prevent excessive CPU usage
+                                end
+                                -- Ensure sprint is disabled when loop ends
+                                pcall(
+                                    function()
+                                        Net.send("set_sprinting_1", false)
+                                    end
+                                )
+                            end
+                        )
+                        if WindUI then
+                            WindUI:Notify(
+                                {
+                                    Title = "✅ INF STAMINA",
+                                    Description = "Infinite Stamina ทำงานแล้ว",
+                                    Duration = 3
+                                }
+                            )
+                        end
+                    else
+                        warn("❌ ไม่พบ SprintBar!")
+                        AutoSprintEnabled = false
+                        AutoSprintToggle:Set(false)
+                    end
+                else
+                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
+                    AutoSprintEnabled = false
+                    AutoSprintToggle:Set(false)
+                end
+            else
+                -- Stop sprint loop and restore stamina behavior
+                if getgenv().AutoSprintLoop then
+                    task.cancel(getgenv().AutoSprintLoop)
+                    getgenv().AutoSprintLoop = nil
+                end
+                -- Ensure sprint is disabled
+                pcall(
+                    function()
+                        Net.send("set_sprinting_1", false)
+                    end
+                )
+                -- Restore original stamina update function
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar and getgenv().OriginalSprintUpdate then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                        getgenv().OriginalSprintUpdate = nil
+                    end
+                end
+                if WindUI then
+                    WindUI:Notify(
+                        {
+                            Title = "❌ Infinite Stamina Disabled",
+                            Description = "Infinite Stamina ถูกปิดแล้ว",
+                            Duration = 3
+                        }
+                    )
+                end
+            end
+        end
+    }
+)
+myConfig:Register("AutoSprint", AutoSprintToggle)
+
+
+------------------------------------------------------------------
+-- 3D BOX ESP (ทั้งหมดรวมในไฟล์เดียว)
+------------------------------------------------------------------
+
+
+
+-- Colors based on health
+local function getHealthColor(health, maxHealth)
+    if not health or not maxHealth or maxHealth <= 0 then
+        return Color3.fromRGB(255, 255, 255)
+    end
+    local percentage = health / maxHealth
+    if percentage >= 0.7 then
+        return Color3.fromRGB(0, 255, 0)
+    elseif percentage >= 0.4 then
+        return Color3.fromRGB(255, 255, 0)
+    else
+        return Color3.fromRGB(255, 0, 0)
+    end
+end
+
+-- ESP instance
+local ESP = {}
+ESP.__index = ESP
+
+function ESP.new(player)
+    local self = setmetatable({}, ESP)
+
+    self.player = player
+    self.character = nil
+    self.humanoid = nil
+    self.rootPart = nil
+
+    self.lines = {}
+    for i = 1, 12 do
+        local line = Drawing.new("Line")
+        line.Thickness = 2
+        line.Visible = false
+        table.insert(self.lines, line)
+    end
+
+    self:setupCharacterListeners()
+    return self
+end
+
+function ESP:setupCharacterListeners()
+    self.characterAddedConnection = self.player.CharacterAdded:Connect(function(character)
+        self:onCharacterAdded(character)
+    end)
+    self.characterRemovingConnection = self.player.CharacterRemoving:Connect(function()
+        self:onCharacterRemoving()
+    end)
+
+    if self.player.Character then
+        self:onCharacterAdded(self.player.Character)
+    end
+end
+
+function ESP:onCharacterAdded(character)
+    self.character = character
+    self.humanoid = character:WaitForChild("Humanoid")
+    self.rootPart = character:WaitForChild("HumanoidRootPart")
+
+    self.humanoidDiedConnection = self.humanoid.Died:Connect(function()
+        self:onCharacterDeath()
+    end)
+end
+
+function ESP:onCharacterRemoving()
+    self:hideESP()
+    self.character = nil
+    self.humanoid = nil
+    self.rootPart = nil
+end
+
+function ESP:onCharacterDeath()
+    self:hideESP()
+end
+
+function ESP:hideESP()
+    for _, line in ipairs(self.lines) do
+        line.Visible = false
+    end
+end
+
+function ESP:update()
+    if not self.player or self.player == localPlayer then
+        self:hideESP()
+        return
+    end
+    if not self.character or not self.humanoid or not self.rootPart then
+        self:hideESP()
+        return
+    end
+    if self.humanoid.Health <= 0 then
+        self:hideESP()
+        return
+    end
+
+    local color = getHealthColor(self.humanoid.Health, self.humanoid.MaxHealth)
+    local cf = self.rootPart.CFrame
+    local size = Vector3.new(3, 6, 3)
+    local halfSize = size / 2
+
+    local corners = {
+        cf * CFrame.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
+        cf * CFrame.new(halfSize.X, -halfSize.Y, -halfSize.Z),
+        cf * CFrame.new(halfSize.X, halfSize.Y, -halfSize.Z),
+        cf * CFrame.new(-halfSize.X, halfSize.Y, -halfSize.Z),
+        cf * CFrame.new(-halfSize.X, -halfSize.Y, halfSize.Z),
+        cf * CFrame.new(halfSize.X, -halfSize.Y, halfSize.Z),
+        cf * CFrame.new(halfSize.X, halfSize.Y, halfSize.Z),
+        cf * CFrame.new(-halfSize.X, halfSize.Y, halfSize.Z),
+    }
+
+    local screenCorners = {}
+    for i, corner in ipairs(corners) do
+        local pos, vis = camera:WorldToViewportPoint(corner.Position)
+        screenCorners[i] = {pos = Vector2.new(pos.X, pos.Y), visible = vis}
+    end
+
+    local edges = {
+        {1,2},{2,3},{3,4},{4,1},
+        {5,6},{6,7},{7,8},{8,5},
+        {1,5},{2,6},{3,7},{4,8}
+    }
+
+    for i, edge in ipairs(edges) do
+        local p1 = screenCorners[edge[1]]
+        local p2 = screenCorners[edge[2]]
+        local line = self.lines[i]
+
+        if p1.visible and p2.visible then
+            line.From = p1.pos
+            line.To = p2.pos
+            line.Color = color
+            line.Visible = true
+        else
+            line.Visible = false
+        end
+    end
+end
+
+function ESP:destroy()
+    if self.characterAddedConnection then self.characterAddedConnection:Disconnect() end
+    if self.characterRemovingConnection then self.characterRemovingConnection:Disconnect() end
+    if self.humanoidDiedConnection then self.humanoidDiedConnection:Disconnect() end
+
+    for _, line in ipairs(self.lines) do
+        line:Remove()
+    end
+end
+
+------------------------------------------------------------------
+-- ESP Manager
+------------------------------------------------------------------
+
+function ESPManager:init()
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= localPlayer then
+            self:addPlayer(player)
+        end
+    end
+
+    players.PlayerAdded:Connect(function(player)
+        if player ~= localPlayer then
+            self:addPlayer(player)
+        end
+    end)
+
+    players.PlayerRemoving:Connect(function(player)
+        self:removePlayer(player)
+    end)
+
+    runService.RenderStepped:Connect(function()
+        if not self.enabled then return end
+        for player, esp in pairs(self.instances) do
+            esp:update()
+        end
+    end)
+end
+
+function ESPManager:addPlayer(player)
+    self.instances[player] = ESP.new(player)
+end
+
+function ESPManager:removePlayer(player)
+    if self.instances[player] then
+        self.instances[player]:destroy()
+        self.instances[player] = nil
+    end
+end
+
+function ESPManager:Enable()
+    self.enabled = true
+end
+
+function ESPManager:Disable()
+    self.enabled = false
+    for _, esp in pairs(self.instances) do
+        esp:hideESP()
+    end
+end
+
+ESPManager:init()
+local function removeHealthBar(player)
+    if ActiveBars[player] then
+        ActiveBars[player]:Destroy()
+        ActiveBars[player] = nil
+    end
+end
+
+local function removeAll()
+    for player, gui in pairs(ActiveBars) do
+        gui:Destroy()
+    end
+    ActiveBars = {}
+end
+
+local function createHealthBar(player)
+    local char = player.Character
+    if not char then return end
+
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local head = char:FindFirstChild("Head")
+    if not humanoid or not head then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "HealthBarESP"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 65, 0, 10)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+
+    
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    bg.BorderSizePixel = 1
+    bg.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    bg.Parent = billboard
+
+    
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, 0, 1, 0)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    bar.BorderSizePixel = 0
+    bar.Parent = bg
+
+    
+    local percentText = Instance.new("TextLabel")
+    percentText.Size = UDim2.new(1, 0, 1, 0)
+    percentText.BackgroundTransparency = 1
+    percentText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    percentText.Font = Enum.Font.GothamBold
+    percentText.TextScaled = true
+    percentText.Text = "100%"
+    percentText.Parent = bg
+
+    billboard.Parent = head
+    ActiveBars[player] = billboard
+    local function update()
+        if not billboard.Parent then return end
+
+        local hp = humanoid.Health
+        local max = humanoid.MaxHealth
+        local percent = math.clamp(hp / max, 0, 1)
+
+        bar.Size = UDim2.new(percent, 0, 1, 0)
+        percentText.Text = tostring(math.floor(percent * 100)) .. "%"
+
+        if percent > 0.66 then
+            bar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        elseif percent > 0.33 then
+            bar.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        else
+            bar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        end
+    end
+
+    humanoid.HealthChanged:Connect(update)
+    update()
+end
+-------------
+-- ฟังชั่นดูของ
+-----------
+
+-- =====================================
+-- RARITY COLORS
+-- =====================================
+local RARITY_COLORS = {
+    ["Common"] = Color3.fromRGB(200, 200, 200),
+    ["Uncommon"] = Color3.fromRGB(86, 176, 62),
+    ["Rare"] = Color3.fromRGB(0, 162, 255),
+    ["Epic"] = Color3.fromRGB(170, 85, 255),
+    ["Legendary"] = Color3.fromRGB(255, 170, 0),
+    ["Omega"] = Color3.fromRGB(255, 75, 75)
+}
+
+-- =====================================
+-- GENERATE UNIQUE KEY
+-- =====================================
+local function generateUniqueKey(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local itemId = tool:GetAttribute("ItemId") or tool:GetAttribute("Id")
+    if itemId and itemId ~= "" then return "ITEMID_" .. tostring(itemId) end
+    return tool.Name
+end
+
+-- =====================================
+-- REGISTER ITEMS
+-- =====================================
+local function registerItems(folder)
+    for _, tool in ipairs(folder:GetDescendants()) do
+        if not tool:IsA("Tool") then continue end
+        local key = generateUniqueKey(tool)
+        if not key then continue end
+
+        local imageId = tool:GetAttribute("ImageId") or ""
+        local rarity = tool:GetAttribute("RarityName") or tool:GetAttribute("Rarity") or "Common"
+
+        WeaponDB[key] = {
+            Name = tool.Name,
+            Rarity = rarity,
+            ImageId = imageId,
+            Tool = tool
+        }
+
+        if imageId:match("^rbxassetid://%d+$") and not PreloadedImages[imageId] then
+            PreloadedImages[imageId] = true
+            task.spawn(function()
+                pcall(function()
+                    ContentProvider:PreloadAsync({imageId})
+                end)
+            end)
+        end
+    end
+end
+
+pcall(function()
+    registerItems(ReplicatedStorage)
+    registerItems(game:GetService("StarterPack"))
+end)
+
+-- =====================================
+-- GET TOOL INFO
+-- =====================================
+local function getWeaponInfo(tool)
+    if not tool or not tool:IsA("Tool") then return nil end
+    local key = generateUniqueKey(tool)
+    return WeaponDB[key]
+end
+
+-- =====================================
+-- RAINBOW STROKE UPDATE
+-- =====================================
+RunService.RenderStepped:Connect(function()
+    local time = tick() % 10
+    local offset = time / 10
+    for i, stroke in ipairs(RainbowStrokes) do
+        local hue = (i/#RainbowStrokes + offset) % 1
+        stroke.Color = Color3.fromHSV(hue, 1, 1)
+    end
+end)
+
+-- =====================================
+-- CREATE BILLBOARD ESP
+-- =====================================
+local function createBillboardForPlayer(player)
+    if player == LocalPlayer or BillboardCache[player] then return end
+
+    local billboard, container
+    local connections = {}
+
+    local function updateESP()
+        if not ESPSettings.Enabled or not billboard or not billboard.Parent then return end
+        container:ClearAllChildren()
+
+        local toolsList = {}
+
+        local function scan(folder)
+            if not folder then return end
+            for _, tool in ipairs(folder:GetChildren()) do
+                if tool:IsA("Tool") then
+                    local info = getWeaponInfo(tool)
+                    if info and info.ImageId:match("^rbxassetid://%d+$") then
+                        table.insert(toolsList, info)
+                    end
+                end
+            end
+        end
+
+        -- ตรวจสอบ 3 ที่: Character, Backpack, StarterGear, StarterPack
+        if player.Character then scan(player.Character) end
+        for _, folderName in ipairs({"Backpack","StarterGear","StarterPack"}) do
+            local folder = player:FindFirstChild(folderName)
+            if folder then scan(folder) end
+        end
+
+        for i, info in ipairs(toolsList) do
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(0,35,0,35)
+            bg.BackgroundColor3 = RARITY_COLORS[info.Rarity] or Color3.fromRGB(200,200,200)
+            bg.BackgroundTransparency = 0
+            bg.Parent = container
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0,6)
+            corner.Parent = bg
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 2
+            stroke.Parent = bg
+            table.insert(RainbowStrokes, stroke)
+
+            local img = Instance.new("ImageLabel")
+            img.Size = UDim2.new(1,-6,1,-6)
+            img.Position = UDim2.new(0,3,0,3)
+            img.BackgroundTransparency = 1
+            img.Image = info.ImageId
+            img.ScaleType = Enum.ScaleType.Fit
+            img.Parent = bg
+        end
+    end
+
+    local function setupBillboard()
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        if BillboardCache[player] then BillboardCache[player]:Destroy() end
+        for _, conn in pairs(connections) do if conn.Connected then conn:Disconnect() end end
+        connections = {}
+
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = "ItemESP"
+        billboard.Adornee = hrp
+        billboard.Size = UDim2.new(0,280,0,40)
+        billboard.StudsOffset = Vector3.new(0,-6.5,0)
+        billboard.AlwaysOnTop = true
+        billboard.LightInfluence = 0
+        billboard.Enabled = ESPSettings.Enabled
+        billboard.Parent = hrp
+
+        container = Instance.new("Frame")
+        container.Size = UDim2.new(1,0,1,0)
+        container.BackgroundTransparency = 1
+        container.Parent = billboard
+
+        BillboardCache[player] = billboard
+        updateESP()
+
+        for _, folderName in ipairs({"Backpack","StarterGear","StarterPack"}) do
+            local folder = player:FindFirstChild(folderName)
+            if folder then
+                table.insert(connections, folder.ChildAdded:Connect(updateESP))
+                table.insert(connections, folder.ChildRemoved:Connect(updateESP))
+            end
+        end
+
+        if char then
+            table.insert(connections, char.ChildAdded:Connect(function(child)
+                if child:IsA("Tool") then task.defer(updateESP) end
+            end))
+            table.insert(connections, char.ChildRemoved:Connect(function(child)
+                if child:IsA("Tool") then task.defer(updateESP) end
+            end))
+        end
+    end
+
+    if player.Character then task.spawn(setupBillboard) end
+    table.insert(connections, player.CharacterAdded:Connect(function() task.wait(1); setupBillboard() end))
+    ItemESP_UpdateConnections[player] = connections
+end
+
+-- =====================================
+-- UPDATE ESP VISIBILITY
+-- =====================================
+local function updateAllESPVisibility()
+    for player, billboard in pairs(BillboardCache) do
+        if billboard then
+            billboard.Enabled = ESPSettings.Enabled
+        end
+    end
+end
+
+-- =====================================
+-- CREATE ESP FOR EXISTING PLAYERS
+-- =====================================
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end
+
+-- =====================================
+-- PLAYER ADDED / REMOVED
+-- =====================================
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then createBillboardForPlayer(p) end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if BillboardCache[p] then BillboardCache[p]:Destroy(); BillboardCache[p]=nil end
+    if ItemESP_UpdateConnections[p] then
+        for _, conn in pairs(ItemESP_UpdateConnections[p]) do if conn.Connected then conn:Disconnect() end end
+        ItemESP_UpdateConnections[p] = nil
+    end
+end)
+
+
+
+local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
+
+ESPTab:Toggle({
+    Title = "ESP Box",
+    Desc = "กล่องสีเหลี่ยม",
+    Default = false,
+    Callback = function(state)
+        if state then
+            ESPManager:Enable()
+        else
+            ESPManager:Disable()
+        end
+    end
+})
+
+
+
+ESPTab:Toggle({
+    Title = "Health ESP",
+    Desc = "มองเลือด",
+    Default = false,
+    Callback = function(state)
+        HealthESP_Enabled = state
+        if state then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    if player.Character then createHealthBar(player) end
+
+                    player.CharacterAdded:Connect(function()
+                        if HealthESP_Enabled then
+                            task.wait(1)
+                            createHealthBar(player)
+                        end
+                    end)
+                end
+            end
+        else            
+            removeAll()
+        end
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Inventory",
+    Desc = "มองของในตัว",
+    Default = false,
+    Callback = function(state)
+        ESPSettings.Enabled = state
+        updateAllESPVisibility()
+    end
+})
+
