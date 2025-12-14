@@ -133,6 +133,15 @@ local WeaponDB = {}
 local PreloadedImages = {}
 local RainbowStrokes = {}
 
+-- ============
+-- ตัวแปรคอมแบท
+-- ============
+local SilentAimEnabled = false
+local ShowFOV = true
+local FOV = 120
+local SilentFOVCircle
+local tracerLine, targetDot
+
 
 -- =========================
 -- Local Variables
@@ -165,11 +174,7 @@ local Window = WindUI:CreateWindow({
 local ConfigManager = Window.ConfigManager
 local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
 
-local SilentAimEnabled = false
-local ShowFOV = true
-local FOV = 120
-local SilentFOVCircle
-local tracerLine, targetDot
+
 
 local function isPlayerExcluded(playerName)
     local lowerPlayerName = string.lower(playerName)
@@ -333,7 +338,7 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
 end
 
 -- =========================
--- Remote Hook ยิงจริง (เพิ่มเอฟเฟคโดยไม่มีปุ่ม)
+-- Remote Hook 
 -- =========================
 local Remote
 pcall(function()
@@ -359,7 +364,7 @@ if Remote and Remote.FireServer then
                         local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
 
                         -- =========================
-                        -- เอฟเฟคกระสุน (เส้นสีชมพู) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคกระสุน
                         -- =========================
                         if origin then
                             pcall(function()
@@ -377,7 +382,7 @@ if Remote and Remote.FireServer then
                         end
 
                         -- =========================
-                        -- เอฟเฟคเมื่อยิงโดน (สีแดง) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคเมื่อยิงโดน
                         -- =========================
                         spawn(function()
                             wait(0.1)
@@ -501,82 +506,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     CreateDrawingObjects()
 end)
 
--- =========================
--- UI Creation
--- =========================
-local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
 
-local SilentToggle = Tab:Toggle({
-    Title = "Silent Aim | wallbang ",
-    Desc = "ล็อคหัวกับยิงทะลุ",
-    Default = false,
-    Callback = function(state)
-        SilentAimEnabled = state
-    end
-})
-myConfig:Register("SilentAim", SilentToggle)
-
-local FOVSlider = Tab:Slider({
-    Title = "FOV: ",
-    Step = 1,
-    Value = {Min = 20, Max = 750, Default = FOV},
-    Callback = function(value)
-        FOV = tonumber(value) or 120
-        if SilentFOVCircle then
-            if isMobile then
-                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
-            else
-                SilentFOVCircle.Radius = FOV
-            end
-        end
-    end
-})
-myConfig:Register("FOVRadius", FOVSlider)
-
-local ShowFOVToggle = Tab:Toggle({
-    Title = "Show FOV",
-    Desc = "แสดงวงFOV",
-    Default = ShowFOV,
-    Callback = function(state)
-        ShowFOV = state
-        if SilentFOVCircle then
-            SilentFOVCircle.Visible = state and SilentAimEnabled
-        end
-    end
-})
-myConfig:Register("ShowFOV", ShowFOVToggle)
-
-Tab:Divider()
-
-local FriendsInput = Tab:Input({
-    Title = "Safe Friend List",
-    Desc = "Enter Player Name",
-    Value = "",
-    InputIcon = "shield-check",
-    Type = "Input",
-    Placeholder = "",
-    Callback = function(input)
-        excludedPlayerNames = {}
-        for name in string.gmatch(input, "%S+") do
-            table.insert(excludedPlayerNames, name)
-        end
-        for _, player in pairs(Players:GetPlayers()) do
-            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
-                local nameText = espPlayers[player].drawings[1]
-                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
-            end
-        end
-    end
-})
-myConfig:Register("FriendsList", FriendsInput)
-
-Players.PlayerAdded:Connect(UpdateExcludedHighlights)
-Players.PlayerRemoving:Connect(function(player)
-    if excludedPlayersUI[player] then
-        excludedPlayersUI[player]:Destroy()
-        excludedPlayersUI[player] = nil
-    end
-end)
 
 
 local PlayerTab = Window:Tab({Title = "Player", Icon = "🏃"})
@@ -1266,4 +1196,77 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
+
+local SilentToggle = Tab:Toggle({
+    Title = "Silent Aim | wallbang ",
+    Desc = "ล็อคหัวกับยิงทะลุ",
+    Default = false,
+    Callback = function(state)
+        SilentAimEnabled = state
+    end
+})
+myConfig:Register("SilentAim", SilentToggle)
+
+local FOVSlider = Tab:Slider({
+    Title = "FOV: ",
+    Step = 1,
+    Value = {Min = 20, Max = 750, Default = FOV},
+    Callback = function(value)
+        FOV = tonumber(value) or 120
+        if SilentFOVCircle then
+            if isMobile then
+                SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
+            else
+                SilentFOVCircle.Radius = FOV
+            end
+        end
+    end
+})
+myConfig:Register("FOVRadius", FOVSlider)
+
+local ShowFOVToggle = Tab:Toggle({
+    Title = "Show FOV",
+    Desc = "แสดงวงFOV",
+    Default = ShowFOV,
+    Callback = function(state)
+        ShowFOV = state
+        if SilentFOVCircle then
+            SilentFOVCircle.Visible = state and SilentAimEnabled
+        end
+    end
+})
+myConfig:Register("ShowFOV", ShowFOVToggle)
+
+Tab:Divider()
+
+local FriendsInput = Tab:Input({
+    Title = "Safe Friend List",
+    Desc = "Enter Player Name",
+    Value = "",
+    InputIcon = "shield-check",
+    Type = "Input",
+    Placeholder = "",
+    Callback = function(input)
+        excludedPlayerNames = {}
+        for name in string.gmatch(input, "%S+") do
+            table.insert(excludedPlayerNames, name)
+        end
+        for _, player in pairs(Players:GetPlayers()) do
+            if espPlayers and espPlayers[player] and espPlayers[player].drawings then
+                local nameText = espPlayers[player].drawings[1]
+                nameText.Color = isPlayerExcluded(player.Name) and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,255,255)
+            end
+        end
+    end
+})
+myConfig:Register("FriendsList", FriendsInput)
+
+Players.PlayerAdded:Connect(UpdateExcludedHighlights)
+Players.PlayerRemoving:Connect(function(player)
+    if excludedPlayersUI[player] then
+        excludedPlayersUI[player]:Destroy()
+        excludedPlayersUI[player] = nil
+    end
+end)
 
