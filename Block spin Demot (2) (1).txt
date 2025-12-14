@@ -1118,7 +1118,6 @@ local ShowFOVToggle = Tab:Toggle({
 })
 myConfig:Register("ShowFOV", ShowFOVToggle)
 
-Tab:Divider()
 
 local FriendsInput = Tab:Input({
     Title = "Safe Friend List",
@@ -1329,6 +1328,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
