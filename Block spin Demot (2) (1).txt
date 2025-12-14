@@ -1153,9 +1153,6 @@ end)
 
 local MainTab = Window:Tab({Title = "☄️Main", Icon = ""})
 
-MainTab:Section({
-    Title = "Money"
-})
 
 local BankBal
     Title = "🏦 Bank Balance",
@@ -1332,6 +1329,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
