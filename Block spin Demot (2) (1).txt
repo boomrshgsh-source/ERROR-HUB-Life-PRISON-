@@ -137,7 +137,6 @@ local RainbowStrokes = {}
 -- silent aim
 -- ========
 
-
 local SilentAimEnabled = false
 local ShowFOV = true
 local FOV = 120
@@ -172,10 +171,93 @@ local Window = WindUI:CreateWindow({
 })
 
 
+
+
+
+
+-- สร้างตารางเก็บ Reference
+local MoneyButtons = {}
+
+local MainTab = Window:Tab({
+    Title = "General",
+    Icon = "globe"
+})
+
+MainTab:Section({
+    Title = "Player Modifier:"
+})
+
+MainTab:Divider()
+
+MainTab:Section({
+    Title = "Wallet Information:"
+})
+
+-- ระบบอัพเดท
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local Client = Players.LocalPlayer
+    local PlayerGui = Client:WaitForChild("PlayerGui")
+    
+    local function HandMoney()
+        local success, result = pcall(function()
+            return tonumber(PlayerGui.TopRightHud.Holder.Frame.MoneyTextLabel.Text:match("%$(%d+)"))
+        end)
+        return success and result or 0
+    end
+    
+    local function ATMMoney()
+        for _, v in ipairs(PlayerGui:GetDescendants()) do
+            if v:IsA("TextLabel") and string.find(v.Text, "Bank Balance") then
+                local success, result = pcall(function()
+                    return tonumber(v.Text:match("%$(%d+)"))
+                end)
+                return success and result or 0
+            end
+        end
+        return 0
+    end
+    
+    while task.wait(0.2) do
+        pcall(function()
+            local bankMoney = ATMMoney()
+            local handMoney = HandMoney()
+            local totalMoney = bankMoney + handMoney
+            
+            if MoneyButtons.Bank then
+                MoneyButtons.Bank:SetDesc('<b><font color="#00FF00">$' .. tostring(bankMoney) .. "</font></b>")
+            end
+            if MoneyButtons.Hand then
+                MoneyButtons.Hand:SetDesc('<b><font color="#00f2ff">$' .. tostring(handMoney) .. "</font></b>")
+            end
+            if MoneyButtons.Total then
+                MoneyButtons.Total:SetDesc('<b><font color="#FFD700">$' .. tostring(totalMoney) .. "</font></b>")
+            end
+        end)
+    end
+end)
+
+-- สร้างปุ่ม
+MoneyButtons.Bank = MainTab:Button({
+    Title = "🏦 Bank Balance",
+    Desc = "$0"
+})
+
+MoneyButtons.Hand = MainTab:Button({
+    Title = "💸 Hand Balance",
+    Desc = "$0"
+})
+
+MoneyButtons.Total = MainTab:Button({
+    Title = "💰 Total Money",
+    Desc = "$0"
+})
 local ConfigManager = Window.ConfigManager
 local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
 
-
+-- ========================
+-- ระบบsiletaim and wallbang
+-- ========================
 
 local function isPlayerExcluded(playerName)
     local lowerPlayerName = string.lower(playerName)
@@ -1270,5 +1352,6 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
