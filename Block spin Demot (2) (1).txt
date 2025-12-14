@@ -133,6 +133,16 @@ local WeaponDB = {}
 local PreloadedImages = {}
 local RainbowStrokes = {}
 
+-- ========
+-- silent aim
+-- ========
+
+
+local SilentAimEnabled = false
+local ShowFOV = true
+local FOV = 120
+local SilentFOVCircle
+local tracerLine, targetDot
 
 -- =========================
 -- Local Variables
@@ -165,11 +175,7 @@ local Window = WindUI:CreateWindow({
 local ConfigManager = Window.ConfigManager
 local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
 
-local SilentAimEnabled = false
-local ShowFOV = true
-local FOV = 120
-local SilentFOVCircle
-local tracerLine, targetDot
+
 
 local function isPlayerExcluded(playerName)
     local lowerPlayerName = string.lower(playerName)
@@ -266,7 +272,7 @@ local function CreateDrawingObjects()
 end
 
 -- =========================
--- Target Selection (ลบฟังก์ชันตีรอบๆ/ในรถ)
+-- Target Selection 
 -- =========================
 local function GetClosestTarget()
     local closest = nil
@@ -333,7 +339,7 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
 end
 
 -- =========================
--- Remote Hook ยิงจริง (เพิ่มเอฟเฟคโดยไม่มีปุ่ม)
+-- Remote Hook 
 -- =========================
 local Remote
 pcall(function()
@@ -359,7 +365,7 @@ if Remote and Remote.FireServer then
                         local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
 
                         -- =========================
-                        -- เอฟเฟคกระสุน (เส้นสีชมพู) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคกระสุน 
                         -- =========================
                         if origin then
                             pcall(function()
@@ -377,7 +383,7 @@ if Remote and Remote.FireServer then
                         end
 
                         -- =========================
-                        -- เอฟเฟคเมื่อยิงโดน (สีแดง) - เปิดตลอดไม่มีปุ่ม
+                        -- เอฟเฟคเมื่อยิงโดน 
                         -- =========================
                         spawn(function()
                             wait(0.1)
@@ -501,10 +507,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     CreateDrawingObjects()
 end)
 
--- =========================
--- UI Creation
--- =========================
-local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
+
+local Tab = Window:Tab({Title = "☄️COMBAT", Icon = ""})
 
 local SilentToggle = Tab:Toggle({
     Title = "Silent Aim | wallbang ",
@@ -579,7 +583,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 
-local PlayerTab = Window:Tab({Title = "Player", Icon = "🏃"})
+local PlayerTab = Window:Tab({Title = "☄️Player", Icon = ""})
 
 local Net = {}
 function Net.send(...)
@@ -706,7 +710,7 @@ myConfig:Register("AutoSprint", AutoSprintToggle)
 
 
 ------------------------------------------------------------------
--- 3D BOX ESP (ทั้งหมดรวมในไฟล์เดียว)
+-- 3D BOX ESP
 ------------------------------------------------------------------
 
 
@@ -1266,4 +1270,5 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
