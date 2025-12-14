@@ -1017,11 +1017,57 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 
+-- =======
+-- TabMain
+-- =======
 
+local Players = game:GetService("Players")
+local Client = Players.LocalPlayer
+local PlayerGui = Client:WaitForChild("PlayerGui")
+
+local function HandMoney()
+    return tonumber(PlayerGui.TopRightHud.Holder.Frame.MoneyTextLabel.Text:match("%$(%d+)"))
+end
+
+local function ATMMoney()
+    for _, v in ipairs(PlayerGui:GetDescendants()) do
+        if v:IsA("TextLabel") and string.find(v.Text, "Bank Balance") then
+            return tonumber(v.Text:match("%$(%d+)"))
+        end
+    end
+    return 0
+end
+-- ===========
+-- updateเรียวทาม
+-- ============
+task.spawn(function()
+    while task.wait(0.2) do
+        BankBalance:SetDesc('<b><font color="#00FF00">$' .. (ATMMoney() or 0) .. "</font></b>")
+        HandBalance:SetDesc('<b><font color="#00f2ff">$' .. (HandMoney() or 0) .. "</font></b>")
+    end
+end)
 
 -- ===========
 -- พวกปุ่มต่างๆ -
 -- ===========
+
+local MainTab = Window:Tab({Title = "☄️Main", Icon = ""})
+
+MainTab:Section({
+    Title = "Money"
+})
+local BankBalance = MainTab:Button({
+    Title = "🏦 Bank Balance",
+    Desc = "N/A"
+})
+
+local HandBalance = MainTab:Button({
+    Title = "💸 Hand Balance",
+    Desc = "N/A"
+})
+
+
+
 
 local Tab = Window:Tab({Title = "☄️COMBAT", Icon = ""})
 
@@ -1040,7 +1086,7 @@ local FOVSlider = Tab:Slider({
     Step = 1,
     Value = {Min = 20, Max = 750, Default = FOV},
     Callback = function(value)
-        FOV = tonumber(value) or 120
+        FOV = tonumber(value)! or 120
         if SilentFOVCircle then
             if isMobile then
                 SilentFOVCircle.Size = UDim2.fromOffset(FOV * 2, FOV * 2)
@@ -1274,5 +1320,6 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
