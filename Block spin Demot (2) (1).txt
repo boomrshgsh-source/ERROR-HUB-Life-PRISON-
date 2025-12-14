@@ -176,19 +176,7 @@ local Window = WindUI:CreateWindow({
 -- ======
 
 
---====================================================
--- 🧍 MAIN TAB
---====================================================
-local MainTab = Window:Tab({
-    Title = "General",
-    Icon = "globe"
-})
-
-MainTab:Section({
-    Title = "Infomation:"
-})
-
---== Money Reader ==--
+-- Money Reader 
 local Players = game:GetService("Players")
 local Client = Players.LocalPlayer
 local PlayerGui = Client:WaitForChild("PlayerGui")
@@ -207,15 +195,6 @@ local function ATMMoney()
     return 0
 end
 
-    al BankBal
-    Title = "🏦 Bank Balance",
-    Desc = "N/A"
-})
-
-local HandBalance = MainTab:Button({
-    Title = "💸 Hand Balance",
-    Desc = "N/A"
-})
 
 -- spawn0.2
 task.spawn(function()
@@ -569,8 +548,9 @@ end)
 
 
 
-
-local PlayerTab = Window:Tab({Title = "Player", Icon = "🏃"})
+-- =========
+-- PlayerTab
+-- =========
 
 local Net = {}
 function Net.send(...)
@@ -583,117 +563,7 @@ function Net.send(...)
     )
 end
 
-local AutoSprintToggle =
-    PlayerTab:Toggle(
-    {
-        Title = "Infinite Stamina",
-        Default = false,
-        Callback = function(state)
-            AutoSprintEnabled = state
-            if AutoSprintEnabled then
-                -- Override stamina update to prevent depletion
-                local success, SprintModule =
-                    pcall(
-                    function()
-                        return require(ReplicatedStorage.Modules.Game.Sprint)
-                    end
-                )
-                if success and SprintModule then
-                    local consume_stamina = SprintModule.consume_stamina
-                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
-                    if SprintBar then
-                        local Old = SprintBar.update
-                        SprintBar.update = function(...)
-                            return Old(
-                                function()
-                                    return 1
-                                end
-                            ) -- Keep stamina at full
-                        end
-                        -- Store original function for restoration
-                        getgenv().OriginalSprintUpdate = Old
-                        -- Start auto sprint loop
-                        getgenv().AutoSprintLoop =
-                            task.spawn(
-                            function()
-                                while AutoSprintEnabled do
-                                    pcall(
-                                        function()
-                                            Net.send("set_sprinting_1", true)
-                                            task.wait(0.5)
-                                            Net.send("set_sprinting_1", false)
-                                        end
-                                    )
-                                    task.wait(0.1) -- Prevent excessive CPU usage
-                                end
-                                -- Ensure sprint is disabled when loop ends
-                                pcall(
-                                    function()
-                                        Net.send("set_sprinting_1", false)
-                                    end
-                                )
-                            end
-                        )
-                        if WindUI then
-                            WindUI:Notify(
-                                {
-                                    Title = "✅ INF STAMINA",
-                                    Description = "Infinite Stamina ทำงานแล้ว",
-                                    Duration = 3
-                                }
-                            )
-                        end
-                    else
-                        warn("❌ ไม่พบ SprintBar!")
-                        AutoSprintEnabled = false
-                        AutoSprintToggle:Set(false)
-                    end
-                else
-                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
-                    AutoSprintEnabled = false
-                    AutoSprintToggle:Set(false)
-                end
-            else
-                -- Stop sprint loop and restore stamina behavior
-                if getgenv().AutoSprintLoop then
-                    task.cancel(getgenv().AutoSprintLoop)
-                    getgenv().AutoSprintLoop = nil
-                end
-                -- Ensure sprint is disabled
-                pcall(
-                    function()
-                        Net.send("set_sprinting_1", false)
-                    end
-                )
-                -- Restore original stamina update function
-                local success, SprintModule =
-                    pcall(
-                    function()
-                        return require(ReplicatedStorage.Modules.Game.Sprint)
-                    end
-                )
-                if success and SprintModule then
-                    local consume_stamina = SprintModule.consume_stamina
-                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
-                    if SprintBar and getgenv().OriginalSprintUpdate then
-                        SprintBar.update = getgenv().OriginalSprintUpdate
-                        getgenv().OriginalSprintUpdate = nil
-                    end
-                end
-                if WindUI then
-                    WindUI:Notify(
-                        {
-                            Title = "❌ Infinite Stamina Disabled",
-                            Description = "Infinite Stamina ถูกปิดแล้ว",
-                            Duration = 3
-                        }
-                    )
-                end
-            end
-        end
-    }
-)
-myConfig:Register("AutoSprint", AutoSprintToggle)
+
 
 
 ------------------------------------------------------------------
@@ -1206,58 +1076,7 @@ end)
 
 
 
-local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
-
-ESPTab:Toggle({
-    Title = "ESP Box",
-    Desc = "กล่องสีเหลี่ยม",
-    Default = false,
-    Callback = function(state)
-        if state then
-            ESPManager:Enable()
-        else
-            ESPManager:Disable()
-        end
-    end
-})
-
-
-
-ESPTab:Toggle({
-    Title = "Health ESP",
-    Desc = "มองเลือด",
-    Default = false,
-    Callback = function(state)
-        HealthESP_Enabled = state
-        if state then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= LocalPlayer then
-                    if player.Character then createHealthBar(player) end
-
-                    player.CharacterAdded:Connect(function()
-                        if HealthESP_Enabled then
-                            task.wait(1)
-                            createHealthBar(player)
-                        end
-                    end)
-                end
-            end
-        else            
-            removeAll()
-        end
-    end
-})
-
-ESPTab:Toggle({
-    Title = "ESP Inventory",
-    Desc = "มองของในตัว",
-    Default = false,
-    Callback = function(state)
-        ESPSettings.Enabled = state
-        updateAllESPVisibility()
-    end
-})
-local Tab = Window:Tab({Title = "COMBAT", Icon = "crosshair"})
+local Tab = Window:Tab({Title = "☄️COMBAT", Icon = ""})
 
 local SilentToggle = Tab:Toggle({
     Title = "Silent Aim | wallbang ",
@@ -1330,5 +1149,189 @@ Players.PlayerRemoving:Connect(function(player)
         excludedPlayersUI[player] = nil
     end
 end)
+
+
+local MainTab = Window:Tab({Title = "☄️Main", Icon = ""})
+
+MainTab:Section({
+    Title = "Money"
+})
+
+local BankBal
+    Title = "🏦 Bank Balance",
+    Desc = "N/A"
+})
+
+local HandBalance = MainTab:Button({
+    Title = "💸 Hand Balance",
+    Desc = "N/A"
+})
+
+local PlayerTab = Window:Tab({Title = "☄️Player", Icon = ""})
+
+    local AutoSprintToggle = PlayerTab:Toggle(
+    {
+        Title = "Infinite Stamina",
+        Default = false,
+        Callback = function(state)
+            AutoSprintEnabled = state
+            if AutoSprintEnabled then
+                -- Override stamina update to prevent depletion
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar then
+                        local Old = SprintBar.update
+                        SprintBar.update = function(...)
+                            return Old(
+                                function()
+                                    return 1
+                                end
+                            ) -- Keep stamina at full
+                        end
+                        -- Store original function for restoration
+                        getgenv().OriginalSprintUpdate = Old
+                        -- Start auto sprint loop
+                        getgenv().AutoSprintLoop =
+                            task.spawn(
+                            function()
+                                while AutoSprintEnabled do
+                                    pcall(
+                                        function()
+                                            Net.send("set_sprinting_1", true)
+                                            task.wait(0.5)
+                                            Net.send("set_sprinting_1", false)
+                                        end
+                                    )
+                                    task.wait(0.1) -- Prevent excessive CPU usage
+                                end
+                                -- Ensure sprint is disabled when loop ends
+                                pcall(
+                                    function()
+                                        Net.send("set_sprinting_1", false)
+                                    end
+                                )
+                            end
+                        )
+                        if WindUI then
+                            WindUI:Notify(
+                                {
+                                    Title = "✅ INF STAMINA",
+                                    Description = "Infinite Stamina ทำงานแล้ว",
+                                    Duration = 3
+                                }
+                            )
+                        end
+                    else
+                        warn("❌ ไม่พบ SprintBar!")
+                        AutoSprintEnabled = false
+                        AutoSprintToggle:Set(false)
+                    end
+                else
+                    warn("❌ ไม่สามารถโหลด SprintModule ได้!")
+                    AutoSprintEnabled = false
+                    AutoSprintToggle:Set(false)
+                end
+            else
+                -- Stop sprint loop and restore stamina behavior
+                if getgenv().AutoSprintLoop then
+                    task.cancel(getgenv().AutoSprintLoop)
+                    getgenv().AutoSprintLoop = nil
+                end
+                -- Ensure sprint is disabled
+                pcall(
+                    function()
+                        Net.send("set_sprinting_1", false)
+                    end
+                )
+                -- Restore original stamina update function
+                local success, SprintModule =
+                    pcall(
+                    function()
+                        return require(ReplicatedStorage.Modules.Game.Sprint)
+                    end
+                )
+                if success and SprintModule then
+                    local consume_stamina = SprintModule.consume_stamina
+                    local SprintBar = getupvalue(consume_stamina, 2).sprint_bar
+                    if SprintBar and getgenv().OriginalSprintUpdate then
+                        SprintBar.update = getgenv().OriginalSprintUpdate
+                        getgenv().OriginalSprintUpdate = nil
+                    end
+                end
+                if WindUI then
+                    WindUI:Notify(
+                        {
+                            Title = "❌ Infinite Stamina Disabled",
+                            Description = "Infinite Stamina ถูกปิดแล้ว",
+                            Duration = 3
+                        }
+                    )
+                end
+            end
+        end
+    }
+)
+myConfig:Register("AutoSprint", AutoSprintToggle)
+
+
+local ESPTab = Window:Tab({Title = "☄️ESP", Icon = ""})
+
+ESPTab:Toggle({
+    Title = "ESP Box",
+    Desc = "กล่องสีเหลี่ยม",
+    Default = false,
+    Callback = function(state)
+        if state then
+            ESPManager:Enable()
+        else
+            ESPManager:Disable()
+        end
+    end
+})
+
+
+
+ESPTab:Toggle({
+    Title = "Health ESP",
+    Desc = "มองเลือด",
+    Default = false,
+    Callback = function(state)
+        HealthESP_Enabled = state
+        if state then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    if player.Character then createHealthBar(player) end
+
+                    player.CharacterAdded:Connect(function()
+                        if HealthESP_Enabled then
+                            task.wait(1)
+                            createHealthBar(player)
+                        end
+                    end)
+                end
+            end
+        else            
+            removeAll()
+        end
+    end
+})
+
+ESPTab:Toggle({
+    Title = "ESP Inventory",
+    Desc = "มองของในตัว",
+    Default = false,
+    Callback = function(state)
+        ESPSettings.Enabled = state
+        updateAllESPVisibility()
+    end
+})
+
 
 
