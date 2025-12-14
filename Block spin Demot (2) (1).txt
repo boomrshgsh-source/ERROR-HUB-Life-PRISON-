@@ -143,6 +143,12 @@ local FOV = 120
 local SilentFOVCircle
 local tracerLine, targetDot
 
+-- =========
+-- Main
+-- =========
+local MoneyButtons = {}
+
+
 -- =========================
 -- Local Variables
 -- =========================
@@ -174,23 +180,13 @@ local Window = WindUI:CreateWindow({
 
 
 
-
--- สร้างตารางเก็บ Reference
-local MoneyButtons = {}
-
 local MainTab = Window:Tab({
-    Title = "General",
-    Icon = "globe"
+    Title = "☄️General",
+    Icon = ""
 })
 
 MainTab:Section({
-    Title = "Player Modifier:"
-})
-
-MainTab:Divider()
-
-MainTab:Section({
-    Title = "Wallet Information:"
+    Title = "Money"
 })
 
 -- ระบบอัพเดท
@@ -237,7 +233,7 @@ task.spawn(function()
     end
 end)
 
--- สร้างปุ่ม
+
 MoneyButtons.Bank = MainTab:Button({
     Title = "🏦 Bank Balance",
     Desc = "$0"
@@ -1352,6 +1348,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
