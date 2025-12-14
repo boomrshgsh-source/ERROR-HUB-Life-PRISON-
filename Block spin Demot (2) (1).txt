@@ -147,6 +147,11 @@ local tracerLine, targetDot
 -- Main
 -- =========
 local MoneyButtons = {}
+local sucking = false
+local lastPickupTimes = {}
+local DROP_DEPTH = -55
+local MOVE_RADIUS = 10
+local FLICKER_RATE = 0.1
 
 
 -- =========================
@@ -181,7 +186,7 @@ local Window = WindUI:CreateWindow({
 
 
 local MainTab = Window:Tab({
-    Title = "☄️General",
+    Title = "☄️Main",
     Icon = ""
 })
 
@@ -248,6 +253,119 @@ MoneyButtons.Total = MainTab:Button({
     Title = "💰 Total Money",
     Desc = "$0"
 })
+
+MainTab:Divider()
+
+MainTab:Section({
+    Title = "Module"
+})
+
+-- =========================
+-- Pickup Items System
+-- =========================
+
+local function NetGet(...)
+    if not CounterTable or not CounterTable.func then
+        return
+    end
+    local args = {...}
+    for i, v in ipairs(args) do
+        if typeof(v) == "Instance" then
+            if v:IsA("Model") and #v:GetChildren() == 0 then
+                local fallback = Workspace:FindFirstChild("DroppedItems")
+                if fallback then
+                    local model = fallback:FindFirstChildWhichIsA("Model")
+                    if model then
+                        args[i] = model
+                    else
+                        return
+                    end
+                else
+                    return
+                end
+            end
+        end
+    end
+    CounterTable.func = (CounterTable.func or 0) + 1
+    local success, result = pcall(function()
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+        return GetRemote:InvokeServer(CounterTable.func, unpack(args))
+    end)
+    if not success then
+        warn("[NetGet Error]", result)
+    end
+    return result
+end
+
+local function CheckAndPickup()
+    if not sucking then
+        return
+    end
+    local dropped = Workspace:FindFirstChild("DroppedItems")
+    if not dropped then
+        return
+    end
+    for _, item in ipairs(dropped:GetChildren()) do
+        if item:IsA("Model") and item:FindFirstChildWhichIsA("BasePart") then
+            local modelCF = item.GetPivot and item:GetPivot() or item:GetModelCFrame()
+            local distance = (HumanoidRootPart.Position - modelCF.Position).Magnitude
+            if distance <= 15 then
+                local now = tick()
+                local lastTime = lastPickupTimes[item] or 0
+                if now - lastTime >= 1.5 then
+                    pcall(function()
+                        NetGet("pickup_dropped_item", item)
+                    end)
+                    lastPickupTimes[item] = now
+                end
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+    end
+    pcall(CheckAndPickup)
+end)
+
+local PickupToggle = Tab_Character:Toggle({
+    Title = "Pickup items",
+    Desc = "ดูดของ",
+    Default = false,
+    Callback = function(state)
+        sucking = state
+        if WindUI then
+            if state then
+                WindUI:Notify({
+                    Title = "✅ Pickup Enabled",
+                    Description = "ดูดของทำงาน",
+                    Duration = 3
+                })
+            else
+                WindUI:Notify({
+                    Title = "❌ Pickup Disabled",
+                    Description = "ปิดระบบดูดของ",
+                    Duration = 3
+                })
+            end
+        end
+    end
+})
+
+
+myConfig:Register("PickupItems", PickupToggle)
+
+-- =========================
+-- อธิบายการทำงาน
+-- =========================
+-- 1. เปิด/ปิดด้วย Toggle "Pickup items" ในแท็บ CHARACTER
+-- 2. ตรวจสอบของใน DroppedItems ทุกเฟรม
+-- 3. เก็บของที่อยู่ภายใน 15 สตัด
+-- 4. มี cooldown 1.5 วินาทีต่อไอเทม
+-- 5. เรียก Remote: pickup_dropped_item
 local ConfigManager = Window.ConfigManager
 local myConfig = ConfigManager:CreateConfig("SilentAimConfig")
 
@@ -1348,6 +1466,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
