@@ -331,7 +331,7 @@ RunService.Heartbeat:Connect(function()
     pcall(CheckAndPickup)
 end)
 
-local PickupToggle = Tab_Character:Toggle({
+local PickupToggle = MainTab:Toggle({
     Title = "Pickup items",
     Desc = "ดูดของ",
     Default = false,
@@ -1466,6 +1466,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
