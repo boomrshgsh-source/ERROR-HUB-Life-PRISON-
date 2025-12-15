@@ -398,7 +398,7 @@ local function GetClosestTarget()
 end
 
 -- =========================
--- Ballistic Prediction Functions
+-- BALLISTIC 
 -- =========================
 local function solveQuadratic(A, B, C)
     local discriminant = B^2 - 4*A*C
@@ -426,9 +426,73 @@ local function projectileDrop(origin, target, projectileSpeed, acceleration)
     return -0.001 * gravity * time^2
 end
 
+-- =========================
+-- PREDICT POSITION 
+-- =========================
+
+local __PredictData = {}
+
 local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity)
-    local t = travelTime or 0.15 -- ลดการคาดการณ์ล่วงหน้า
-    return targetPos + (approxVel * t) + (targetPos - origin).Unit * t + projectileDrop(origin, targetPos, 1000, gravity or 196.2)
+    local t = travelTime or 0.15
+
+    local targetPlayer
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and (hrp.Position - targetPos).Magnitude < 2 then
+                targetPlayer = plr
+                break
+            end
+        end
+    end
+
+    if not targetPlayer then
+        return targetPos + approxVel * t
+    end
+
+    if not __PredictData[targetPlayer] then
+        __PredictData[targetPlayer] = {
+            vel = {},
+            last = nil,
+            confidence = 0
+        }
+    end
+
+    local data = __PredictData[targetPlayer]
+
+    table.insert(data.vel, approxVel)
+    if #data.vel > 12 then
+        table.remove(data.vel, 1)
+    end
+
+    local unstable = false
+    if #data.vel >= 3 then
+        local dv = (data.vel[#data.vel] - data.vel[#data.vel-1]).Magnitude
+        unstable = dv > 250
+    end
+
+    data.confidence = math.clamp(
+        data.confidence + (unstable and 0.15 or -0.1),
+        0,
+        1
+    )
+
+    local smoothVel = Vector3.zero
+    for _, v in ipairs(data.vel) do
+        smoothVel += v
+    end
+    smoothVel /= #data.vel
+
+    local mult = data.confidence > 0.4 and 0.45 or 1.35
+
+    local predicted = targetPos + (smoothVel * t * mult
+
+    if data.last then
+        predicted = data.last:Lerp(predicted, data.confidence > 0.4 and 0.15 or 0.3)
+    end
+
+    data.last = predicted
+    return predicted
 end
 
 -- =========================
@@ -454,12 +518,15 @@ if Remote and Remote.FireServer then
                     local humanoid = target.Character:FindFirstChild("Humanoid")
 
                     if head and humanoid and humanoid.Health > 0 and hrp then
-                        local origin = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") and LocalPlayer.Character.Head.Position
-                        local aimPos = origin and PredictPosition(origin, head.Position, hrp.Velocity) or head.Position
+                        local origin =
+                            LocalPlayer.Character
+                            and LocalPlayer.Character:FindFirstChild("Head")
+                            and LocalPlayer.Character.Head.Position
 
-                        -- =========================
-                        -- เอฟเฟคกระสุน 
-                        -- =========================
+                        local aimPos = origin
+                            and PredictPosition(origin, head.Position, hrp.Velocity)
+                            or head.Position
+
                         if origin then
                             pcall(function()
                                 local part = Instance.new("Part")
@@ -469,15 +536,12 @@ if Remote and Remote.FireServer then
                                 part.CFrame = CFrame.new(origin, aimPos) * CFrame.new(0, 0, -part.Size.Z / 2)
                                 part.Material = Enum.Material.Neon
                                 part.Transparency = 0.25
-                                part.Color = Color3.fromRGB(255, 0, 255) -- ชมพู neon
+                                part.Color = Color3.fromRGB(255, 0, 255)
                                 part.Parent = Workspace
                                 Debris:AddItem(part, 4)
                             end)
                         end
-
-                        -- =========================
-                        -- เอฟเฟคเมื่อยิงโดน 
-                        -- =========================
+                        
                         spawn(function()
                             wait(0.1)
                             if humanoid and humanoid.Parent and humanoid.Health > 0 then
@@ -491,7 +555,7 @@ if Remote and Remote.FireServer then
                                             box.Anchored = true
                                             box.CanCollide = false
                                             box.Material = Enum.Material.Neon
-                                            box.Color = Color3.fromRGB(255, 0, 0) -- แดง neon
+                                            box.Color = Color3.fromRGB(255, 0, 0)
                                             box.Transparency = 0.5
                                             box.Parent = Workspace
                                             local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
@@ -512,8 +576,8 @@ if Remote and Remote.FireServer then
                         args[5] = {
                             [1] = {
                                 [1] = {
-                                    ["Instance"] = head,
-                                    ["Position"] = aimPos
+                                    Instance = head,
+                                    Position = aimPos
                                 }
                             }
                         }
@@ -523,6 +587,7 @@ if Remote and Remote.FireServer then
             return oldFire(self, unpack(args))
         end)
     end)
+
     if not ok then
         warn("Warning: Failed to hook Remote.FireServer for ballistic aim")
     end
@@ -1363,6 +1428,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
