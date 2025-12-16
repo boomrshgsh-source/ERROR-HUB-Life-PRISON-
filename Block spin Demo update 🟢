@@ -397,7 +397,7 @@ local function GetClosestTarget()
     return closest
 end
 -- =========================
--- BALLISTIC (คงไว้ แต่ไม่ใช้แล้ว)
+-- BALLISTIC 
 -- =========================
 local function solveQuadratic(A, B, C)
     local discriminant = B^2 - 4*A*C
@@ -426,15 +426,14 @@ local function projectileDrop(origin, target, projectileSpeed, acceleration)
 end
 
 -- =========================
--- PREDICT POSITION (ANTI-LOCK VERSION)
--- 🔁 ชื่อเหมือนเดิม / เรียกเหมือนเดิม
+-- PREDICT POSITION 
 -- =========================
 local __PredictData = {}
 
 local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity)
     local t = travelTime or 0.15
 
-    -- หา player จากตำแหน่ง (เพื่อให้เข้ากับโค้ดเดิม)
+    
     local targetPlayer
     for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr.Character then
@@ -446,7 +445,7 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
         end
     end
 
-    -- fallback ถ้าหา player ไม่เจอ
+
     if not targetPlayer then
         return targetPos + approxVel * t
     end
@@ -461,13 +460,11 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
 
     local data = __PredictData[targetPlayer]
 
-    -- เก็บ velocity history
     table.insert(data.vel, approxVel)
     if #data.vel > 12 then
         table.remove(data.vel, 1)
     end
 
-    -- ตรวจ spin / jitter
     local unstable = false
     if #data.vel >= 3 then
         local dv = (data.vel[#data.vel] - data.vel[#data.vel-1]).Magnitude
@@ -480,7 +477,6 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
         1
     )
 
-    -- smooth velocity
     local smoothVel = Vector3.zero
     for _, v in ipairs(data.vel) do
         smoothVel += v
@@ -502,7 +498,7 @@ local function PredictPosition(origin, targetPos, approxVel, travelTime, gravity
 end
 
 -- =========================
--- Remote Hook (เดิมทั้งหมด)
+-- Remote Hook 
 -- =========================
 local Remote
 pcall(function()
@@ -529,12 +525,12 @@ if Remote and Remote.FireServer then
                             and LocalPlayer.Character:FindFirstChild("Head")
                             and LocalPlayer.Character.Head.Position
 
-                        -- ⬇ บรรทัดนี้ยังเหมือนเดิม
+                        
                         local aimPos = origin
                             and PredictPosition(origin, head.Position, hrp.Velocity)
                             or head.Position
 
-                        -- เอฟเฟคกระสุน (เดิม)
+                        -- เอฟเฟคกระสุน
                         if origin then
                             pcall(function()
                                 local part = Instance.new("Part")
@@ -550,7 +546,7 @@ if Remote and Remote.FireServer then
                             end)
                         end
 
-                        -- เอฟเฟคโดน (เดิม)
+                        -- เอฟเฟคโดน
                         spawn(function()
                             wait(0.1)
                             if humanoid and humanoid.Parent and humanoid.Health > 0 then
@@ -1437,6 +1433,7 @@ ESPTab:Toggle({
         updateAllESPVisibility()
     end
 })
+
 
 
 
